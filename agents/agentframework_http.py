@@ -58,10 +58,10 @@ else:
 
 async def http_mcp_example() -> None:
     """
-    Demonstrate MCP integration with Microsoft Learn documentation.
+    Demonstrate MCP integration with the local Expenses MCP server.
     
-    Creates an agent that can answer questions about Microsoft documentation
-    using the Microsoft Learn MCP server.
+    Creates an agent that can help users log expenses
+    using the Expenses MCP server at http://localhost:8000/mcp/.
     """
     async with (
         MCPStreamableHTTPTool(
