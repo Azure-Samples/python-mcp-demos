@@ -1,0 +1,27 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+      "name": {
+        "value": "${AZURE_ENV_NAME}"
+      },
+      "location": {
+        "value": "${AZURE_LOCATION}"
+      },
+      "principalId": {
+        "value": "${AZURE_PRINCIPAL_ID}"
+      },
+      "useVnet": {
+        "value": "${USE_VNET=false}"
+      },
+      "usePrivateIngress": {
+        "value": "${USE_PRIVATE_INGRESS=false}"
+      },
+      "useMonitoring": {
+        "value": "${USE_MONITORING=false}"
+      },
+      "acaExists": {
+        "value": "${SERVICE_ACA_RESOURCE_EXISTS=false}"
+      }
+    }
+  }

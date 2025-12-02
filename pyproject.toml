@@ -15,4 +15,5 @@ dependencies = [
     "langchain-mcp-adapters>=0.1.11",
     "azure-ai-agents>=1.1.0",
     "agent-framework>=1.0.0b251016",
+    "azure-cosmos>=4.9.0",
 ]

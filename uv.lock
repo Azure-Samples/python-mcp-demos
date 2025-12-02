@@ -331,6 +331,19 @@ wheels = [
 ]
 
 [[package]]
+name = "azure-cosmos"
+version = "4.14.2"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "azure-core" },
+    { name = "typing-extensions" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/bc/5b/037a296c4ed0d49eb745592bdb9db8cc7fc29eb41a3cd12703d7841f70ec/azure_cosmos-4.14.2.tar.gz", hash = "sha256:7fb746449ef159304c5af6fe687548e561c1f1e257fd6505d60158d00101ec6e", size = 2034916 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/48/f3/d7c938771c8dc1ad7ae44370694ebacb06d9b37f70be846033395af2c56b/azure_cosmos-4.14.2-py3-none-any.whl", hash = "sha256:f0783a9b1c13f8dbd62bdbf8456f927125d77d5267e5ff6b37193bcd4554fd2c", size = 388602 },
+]
+
+[[package]]
 name = "azure-identity"
 version = "1.25.1"
 source = { registry = "https://pypi.org/simple" }
@@ -2197,6 +2210,7 @@ source = { virtual = "." }
 dependencies = [
     { name = "agent-framework" },
     { name = "azure-ai-agents" },
+    { name = "azure-cosmos" },
     { name = "azure-identity" },
     { name = "debugpy" },
     { name = "fastmcp" },
@@ -2211,6 +2225,7 @@ dependencies = [
 requires-dist = [
     { name = "agent-framework", specifier = ">=1.0.0b251016" },
     { name = "azure-ai-agents", specifier = ">=1.1.0" },
+    { name = "azure-cosmos", specifier = ">=4.9.0" },
     { name = "azure-identity", specifier = ">=1.25.1" },
     { name = "debugpy", specifier = ">=1.8.0" },
     { name = "fastmcp", specifier = ">=2.12.5" },

@@ -26,7 +26,7 @@ logger = logging.getLogger("agentframework_mcp_http")
 load_dotenv(override=True)
 
 # Constants
-MCP_SERVER_URL = "http://localhost:8000/mcp/"
+MCP_SERVER_URL = os.getenv("MCP_SERVER_URL", "http://localhost:8000/mcp/")
 
 # Configure chat client based on API_HOST
 API_HOST = os.getenv("API_HOST", "github")

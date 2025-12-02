@@ -25,8 +25,7 @@ logger = logging.getLogger("itinerario_lang")
 load_dotenv(override=True)
 
 # Constants
-MCP_SERVER_URL = "http://localhost:8000/mcp/"
-AZURE_COGNITIVE_SERVICES_SCOPE = "https://cognitiveservices.azure.com/.default"
+MCP_SERVER_URL = os.getenv("MCP_SERVER_URL", "http://localhost:8000/mcp/")
 
 # Configure language model based on API_HOST
 API_HOST = os.getenv("API_HOST", "github")
@@ -34,7 +33,7 @@ API_HOST = os.getenv("API_HOST", "github")
 if API_HOST == "azure":
     token_provider = azure.identity.get_bearer_token_provider(
         azure.identity.DefaultAzureCredential(),
-        AZURE_COGNITIVE_SERVICES_SCOPE
+        "https://cognitiveservices.azure.com/.default"
     )
     base_model = ChatOpenAI(
         model=os.environ.get("AZURE_OPENAI_CHAT_DEPLOYMENT"),
