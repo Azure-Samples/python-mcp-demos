@@ -2,6 +2,7 @@ param name string
 param location string = resourceGroup().location
 param tags object = {}
 
+// It would be better security-wise if this was false, but that is not yet working with the VNet+azd integration
 param adminUserEnabled bool = true
 param anonymousPullEnabled bool = false
 param dataEndpointEnabled bool = false

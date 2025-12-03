@@ -162,7 +162,7 @@ module containerAppsNSG 'br/public:avm/res/network/network-security-group:0.5.1'
     name: '${prefix}-container-apps-nsg'
     location: location
     tags: tags
-    securityRules: usePrivateIngress
+    securityRules: !usePrivateIngress
       ? [
           {
             name: 'AllowHttpsInbound'
