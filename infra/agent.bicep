@@ -10,7 +10,6 @@ param exists bool
 param openAiDeploymentName string
 param openAiEndpoint string
 param mcpServerUrl string
-param applicationInsightsConnectionString string = ''
 
 resource agentIdentity 'Microsoft.ManagedIdentity/userAssignedIdentities@2023-01-31' = {
   name: identityName
@@ -52,11 +51,6 @@ module app 'core/host/container-app-upsert.bicep' = {
       {
         name: 'RUNNING_IN_PRODUCTION'
         value: 'true'
-      }
-      // We typically store sensitive values in secrets, but App Insights connection strings are not considered highly sensitive
-      {
-        name: 'APPLICATIONINSIGHTS_CONNECTION_STRING'
-        value: applicationInsightsConnectionString
       }
     ]
   }
