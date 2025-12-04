@@ -26,7 +26,21 @@ module containerAppsEnvironment 'br/public:avm/res/app/managed-environment:0.11.
     location: location
     tags: tags
     zoneRedundant: false
-    publicNetworkAccess: 'Enabled'
+    publicNetworkAccess: usePrivateIngress ? 'Disabled' : 'Enabled'
+    workloadProfiles: usePrivateIngress
+      ? [
+          {
+            name: 'Consumption'
+            workloadProfileType: 'Consumption'
+          }
+          {
+            name: 'Warm'
+            workloadProfileType: 'D4'
+            minimumCount: 1
+            maximumCount: 3
+          }
+        ]
+      : []
     appLogsConfiguration: useLogging
       ? {
           destination: 'log-analytics'

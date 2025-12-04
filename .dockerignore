@@ -1,0 +1,20 @@
+.azure
+.venv
+.logfire
+.devcontainer
+
+# Exclude most of infra, but allow keycloak files needed for builds
+infra/*.bicep
+infra/*.ps1
+infra/*.sh
+infra/core
+
+# Common Python and development files to exclude
+__pycache__
+*.pyc
+*.pyo
+*.egg-info
+.pytest_cache
+.ruff_cache
+.env
+.git

@@ -657,6 +657,15 @@ wheels = [
 ]
 
 [[package]]
+name = "executing"
+version = "2.2.1"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/cc/28/c14e053b6762b1044f34a13aab6859bbf40456d37d23aa286ac24cfd9a5d/executing-2.2.1.tar.gz", hash = "sha256:3632cc370565f6648cc328b32435bd120a1e4ebb20c77e3fdde9a13cd1e533c4", size = 1129488 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/c1/ea/53f2148663b321f21b5a606bd5f191517cf40b7072c0497d3c92c4a13b1e/executing-2.2.1-py2.py3-none-any.whl", hash = "sha256:760643d3452b4d777d295bb167ccc74c64a81df23fb5e08eff250c425a4b2017", size = 28317 },
+]
+
+[[package]]
 name = "fastapi"
 version = "0.119.1"
 source = { registry = "https://pypi.org/simple" }
@@ -1247,6 +1256,24 @@ wheels = [
 ]
 
 [[package]]
+name = "logfire"
+version = "4.15.1"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "executing" },
+    { name = "opentelemetry-exporter-otlp-proto-http" },
+    { name = "opentelemetry-instrumentation" },
+    { name = "opentelemetry-sdk" },
+    { name = "protobuf" },
+    { name = "rich" },
+    { name = "typing-extensions" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/26/7b/3cdbfbd8fc085912d7322afc5f16ffd396197574fc9c786422b0ce3f5232/logfire-4.15.1.tar.gz", hash = "sha256:fac8463c0319af6d1bf66788802ff0a04b481dac006564f6837f64c7404f474a", size = 549319 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/21/44/45c39998cb3920a11498455f3f62f173bd3f5d9a15bd0db40f88bedb9e1f/logfire-4.15.1-py3-none-any.whl", hash = "sha256:b931d2becf937c08d7c89f1ab68ab05298095b010dfaf29cbd22f7bcacbaa2bb", size = 228716 },
+]
+
+[[package]]
 name = "markdown-it-py"
 version = "4.0.0"
 source = { registry = "https://pypi.org/simple" }
@@ -1669,6 +1696,24 @@ wheels = [
 ]
 
 [[package]]
+name = "opentelemetry-exporter-otlp-proto-http"
+version = "1.38.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "googleapis-common-protos" },
+    { name = "opentelemetry-api" },
+    { name = "opentelemetry-exporter-otlp-proto-common" },
+    { name = "opentelemetry-proto" },
+    { name = "opentelemetry-sdk" },
+    { name = "requests" },
+    { name = "typing-extensions" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/81/0a/debcdfb029fbd1ccd1563f7c287b89a6f7bef3b2902ade56797bfd020854/opentelemetry_exporter_otlp_proto_http-1.38.0.tar.gz", hash = "sha256:f16bd44baf15cbe07633c5112ffc68229d0edbeac7b37610be0b2def4e21e90b", size = 17282 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/e5/77/154004c99fb9f291f74aa0822a2f5bbf565a72d8126b3a1b63ed8e5f83c7/opentelemetry_exporter_otlp_proto_http-1.38.0-py3-none-any.whl", hash = "sha256:84b937305edfc563f08ec69b9cb2298be8188371217e867c1854d77198d0825b", size = 19579 },
+]
+
+[[package]]
 name = "opentelemetry-instrumentation"
 version = "0.59b0"
 source = { registry = "https://pypi.org/simple" }
@@ -1790,6 +1835,22 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/49/01/31282a46b09684dfc636bc066deb090bae6973e71e85e253a8c74e727b1f/opentelemetry_instrumentation_requests-0.59b0.tar.gz", hash = "sha256:9af2ffe3317f03074d7f865919139e89170b6763a0251b68c25e8e64e04b3400", size = 15186 }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/e5/ea/c282ba418b2669e4f730cb3f68b02a0ca65f4baf801e971169a4cc449ffb/opentelemetry_instrumentation_requests-0.59b0-py3-none-any.whl", hash = "sha256:d43121532877e31a46c48649279cec2504ee1e0ceb3c87b80fe5ccd7eafc14c1", size = 12966 },
+]
+
+[[package]]
+name = "opentelemetry-instrumentation-starlette"
+version = "0.59b0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "opentelemetry-api" },
+    { name = "opentelemetry-instrumentation" },
+    { name = "opentelemetry-instrumentation-asgi" },
+    { name = "opentelemetry-semantic-conventions" },
+    { name = "opentelemetry-util-http" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/99/39/95e5868e731bcf08a642483afaa34c455bfa4f61d6cfdd096626e9ee40d6/opentelemetry_instrumentation_starlette-0.59b0.tar.gz", hash = "sha256:3f033fd92d6a8e4122ebcb3d83afc5c64d6be7930e9094876eb02b8afbd08ba5", size = 14657 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/60/fc/4727e11d7c442ba8bb79ba261303c9e061c235eabcf633ddefc10230c8c4/opentelemetry_instrumentation_starlette-0.59b0-py3-none-any.whl", hash = "sha256:a833b97d297e4b2aaf58041612663dbabb8380e3993c76a4e32b3e351470f321", size = 11778 },
 ]
 
 [[package]]
@@ -2280,15 +2341,19 @@ source = { virtual = "." }
 dependencies = [
     { name = "agent-framework" },
     { name = "azure-ai-agents" },
+    { name = "azure-core-tracing-opentelemetry" },
     { name = "azure-cosmos" },
     { name = "azure-identity" },
+    { name = "azure-monitor-opentelemetry" },
     { name = "debugpy" },
     { name = "fastmcp" },
     { name = "langchain" },
     { name = "langchain-core" },
     { name = "langchain-mcp-adapters" },
     { name = "langchain-openai" },
+    { name = "logfire" },
     { name = "mcp" },
+    { name = "opentelemetry-instrumentation-starlette" },
 ]
 
 [package.dev-dependencies]
@@ -2301,15 +2366,19 @@ dev = [
 requires-dist = [
     { name = "agent-framework", specifier = ">=1.0.0b251016" },
     { name = "azure-ai-agents", specifier = ">=1.1.0" },
+    { name = "azure-core-tracing-opentelemetry", specifier = ">=1.0.0b12" },
     { name = "azure-cosmos", specifier = ">=4.9.0" },
     { name = "azure-identity", specifier = ">=1.25.1" },
+    { name = "azure-monitor-opentelemetry", specifier = ">=1.6.4" },
     { name = "debugpy", specifier = ">=1.8.0" },
     { name = "fastmcp", specifier = ">=2.12.5" },
     { name = "langchain", specifier = "==1.0.0a5" },
     { name = "langchain-core", specifier = ">=0.3.0" },
     { name = "langchain-mcp-adapters", specifier = ">=0.1.11" },
     { name = "langchain-openai", specifier = ">=1.0.1" },
+    { name = "logfire", specifier = ">=4.15.1" },
     { name = "mcp", specifier = ">=1.3.0" },
+    { name = "opentelemetry-instrumentation-starlette", specifier = ">=0.49b0" },
 ]
 
 [package.metadata.requires-dev]

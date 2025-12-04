@@ -1,52 +1,24 @@
-@description('Name of the MCP server container app')
 param name string
-
-@description('Azure region for deployment')
 param location string = resourceGroup().location
-
-@description('Tags to apply to all resources')
 param tags object = {}
 
-@description('User assigned identity name for ACR pull and Azure service access')
 param identityName string
-
-@description('Name of the Container Apps environment')
 param containerAppsEnvironmentName string
-
-@description('Name of the Azure Container Registry')
 param containerRegistryName string
-
-@description('Service name for azd tagging')
-param serviceName string = 'aca'
-
-@description('Whether the container app already exists (for updates)')
+param serviceName string = 'server'
 param exists bool
-
-@description('Azure OpenAI deployment name')
 param openAiDeploymentName string
-
-@description('Azure OpenAI endpoint URL')
 param openAiEndpoint string
-
-@description('Cosmos DB account name')
 param cosmosDbAccount string
-
-@description('Cosmos DB database name')
 param cosmosDbDatabase string
-
-@description('Cosmos DB container name')
 param cosmosDbContainer string
-
-@description('Keycloak realm URL for token validation')
+param applicationInsightsConnectionString string = ''
 param keycloakRealmUrl string
-
-@description('Base URL of the MCP server (for OAuth metadata)')
 param mcpServerBaseUrl string
-
-@description('Expected audience claim in JWT tokens')
 param mcpServerAudience string = 'mcp-server'
 
-resource acaIdentity 'Microsoft.ManagedIdentity/userAssignedIdentities@2023-01-31' = {
+
+resource serverIdentity 'Microsoft.ManagedIdentity/userAssignedIdentities@2023-01-31' = {
   name: identityName
   location: location
 }
@@ -57,7 +29,7 @@ module app 'core/host/container-app-upsert.bicep' = {
     name: name
     location: location
     tags: union(tags, { 'azd-service-name': serviceName })
-    identityName: acaIdentity.name
+    identityName: serverIdentity.name
     exists: exists
     containerAppsEnvironmentName: containerAppsEnvironmentName
     containerRegistryName: containerRegistryName
@@ -77,7 +49,7 @@ module app 'core/host/container-app-upsert.bicep' = {
       }
       {
         name: 'AZURE_CLIENT_ID'
-        value: acaIdentity.properties.clientId
+        value: serverIdentity.properties.clientId
       }
       {
         name: 'AZURE_COSMOSDB_ACCOUNT'
@@ -90,6 +62,11 @@ module app 'core/host/container-app-upsert.bicep' = {
       {
         name: 'AZURE_COSMOSDB_CONTAINER'
         value: cosmosDbContainer
+      }
+      // We typically store sensitive values in secrets, but App Insights connection strings are not considered highly sensitive
+      {
+        name: 'APPLICATIONINSIGHTS_CONNECTION_STRING'
+        value: applicationInsightsConnectionString
       }
       // Keycloak authentication environment variables
       {
@@ -106,10 +83,41 @@ module app 'core/host/container-app-upsert.bicep' = {
       }
     ]
     targetPort: 8000
+    probes: [
+      {
+        type: 'Startup'
+        httpGet: {
+          path: '/health'
+          port: 8000
+        }
+        initialDelaySeconds: 10
+        periodSeconds: 3
+        failureThreshold: 60
+      }
+      {
+        type: 'Readiness'
+        httpGet: {
+          path: '/health'
+          port: 8000
+        }
+        initialDelaySeconds: 5
+        periodSeconds: 5
+        failureThreshold: 3
+      }
+      {
+        type: 'Liveness'
+        httpGet: {
+          path: '/health'
+          port: 8000
+        }
+        periodSeconds: 10
+        failureThreshold: 3
+      }
+    ]
   }
 }
 
-output identityPrincipalId string = acaIdentity.properties.principalId
+output identityPrincipalId string = serverIdentity.properties.principalId
 output name string = app.outputs.name
 output hostName string = app.outputs.hostName
 output uri string = app.outputs.uri

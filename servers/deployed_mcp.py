@@ -1,3 +1,5 @@
+"""Run with: cd servers && uvicorn deployed_mcp:app --host 0.0.0.0 --port 8000"""
+
 import logging
 import os
 import uuid
@@ -5,21 +7,44 @@ from datetime import date
 from enum import Enum
 from typing import Annotated
 
+import logfire
+from azure.core.settings import settings
 from azure.cosmos.aio import CosmosClient
 from azure.identity.aio import DefaultAzureCredential, ManagedIdentityCredential
+from azure.monitor.opentelemetry import configure_azure_monitor
 from dotenv import load_dotenv
 from fastmcp import FastMCP
+from opentelemetry.instrumentation.starlette import StarletteInstrumentor
+from starlette.responses import JSONResponse
 
-load_dotenv(override=True)
+try:
+    from opentelemetry_middleware import OpenTelemetryMiddleware
+except ImportError:
+    from servers.opentelemetry_middleware import OpenTelemetryMiddleware
 
-logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(message)s")
+RUNNING_IN_PRODUCTION = os.getenv("RUNNING_IN_PRODUCTION", "false").lower() == "true"
+
+if not RUNNING_IN_PRODUCTION:
+    load_dotenv(override=True)
+
+logging.basicConfig(level=logging.WARNING, format="%(asctime)s - %(message)s")
 logger = logging.getLogger("ExpensesMCP")
+logger.setLevel(logging.INFO)
+
+# Configure OpenTelemetry tracing, either via Azure Monitor or Logfire
+# We don't support both at the same time due to potential conflicts with tracer providers
+if os.getenv("APPLICATIONINSIGHTS_CONNECTION_STRING"):
+    logger.info("Setting up Azure Monitor instrumentation")
+    configure_azure_monitor()
+elif os.getenv("LOGFIRE_PROJECT_NAME"):
+    logger.info("Setting up Logfire instrumentation")
+    settings.tracing_implementation = "opentelemetry"  # Configure Azure SDK to use OpenTelemetry tracing
+    logfire.configure(service_name="expenses-mcp", send_to_logfire=True)
 
 # Cosmos DB configuration from environment variables
 AZURE_COSMOSDB_ACCOUNT = os.environ["AZURE_COSMOSDB_ACCOUNT"]
 AZURE_COSMOSDB_DATABASE = os.environ["AZURE_COSMOSDB_DATABASE"]
 AZURE_COSMOSDB_CONTAINER = os.environ["AZURE_COSMOSDB_CONTAINER"]
-RUNNING_IN_PRODUCTION = os.getenv("RUNNING_IN_PRODUCTION", "false").lower() == "true"
 AZURE_CLIENT_ID = os.getenv("AZURE_CLIENT_ID", "")
 
 # Configure Cosmos DB client and container
@@ -37,6 +62,22 @@ cosmos_container = cosmos_db.get_container_client(AZURE_COSMOSDB_CONTAINER)
 logger.info(f"Connected to Cosmos DB: {AZURE_COSMOSDB_ACCOUNT}")
 
 mcp = FastMCP("Expenses Tracker")
+mcp.add_middleware(OpenTelemetryMiddleware("ExpensesMCP"))
+
+
+@mcp.custom_route("/health", methods=["GET"])
+async def health_check(_request):
+    """
+    Health check endpoint for service availability.
+
+    This endpoint is used by Azure Container Apps health probes to verify that the service is running.
+    Returns a JSON response with the following format:
+        {
+            "status": "healthy",
+            "service": "mcp-server"
+        }
+    """
+    return JSONResponse({"status": "healthy", "service": "mcp-server"})
 
 
 class PaymentMethod(Enum):
@@ -152,7 +193,4 @@ def analyze_spending_prompt(
 
 # ASGI application for uvicorn
 app = mcp.http_app()
-
-if __name__ == "__main__":
-    logger.info("MCP Expenses server starting (HTTP mode on port 8000)")
-    mcp.run(transport="http", host="0.0.0.0", port=8000)
+StarletteInstrumentor.instrument_app(app)

@@ -15,6 +15,8 @@ param subnetResourceId string = ''
 
 param usePrivateIngress bool = true
 
+param usePrivateAcr bool = false
+
 module containerAppsEnvironment 'container-apps-environment.bicep' = {
   name: '${name}-container-apps-environment'
   params: {
@@ -36,6 +38,7 @@ module containerRegistry 'container-registry.bicep' = {
     location: location
     tags: tags
     useVnet: !empty(vnetName)
+    usePrivateAcr: usePrivateAcr
   }
 }
 

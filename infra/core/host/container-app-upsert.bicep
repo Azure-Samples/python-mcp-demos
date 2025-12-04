@@ -40,6 +40,9 @@ param containerCpuCoreCount string = '0.5'
 @description('Memory allocated to a single container instance, e.g. 1Gi')
 param containerMemory string = '1.0Gi'
 
+@description('Health probes for the container')
+param probes array = []
+
 resource existingApp 'Microsoft.App/containerApps@2025-01-01' existing = if (exists) {
   name: name
 }
@@ -67,6 +70,7 @@ module app 'container-app.bicep' = {
     env: env
     imageName: exists ? existingApp.properties.template.containers[0].image : ''
     targetPort: targetPort
+    probes: probes
   }
 }
 

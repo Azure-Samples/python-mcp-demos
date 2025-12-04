@@ -16,6 +16,10 @@ dependencies = [
     "azure-ai-agents>=1.1.0",
     "agent-framework>=1.0.0b251016",
     "azure-cosmos>=4.9.0",
+    "azure-monitor-opentelemetry>=1.6.4",
+    "opentelemetry-instrumentation-starlette>=0.49b0",
+    "logfire>=4.15.1",
+    "azure-core-tracing-opentelemetry>=1.0.0b12"
 ]
 
 [dependency-groups]

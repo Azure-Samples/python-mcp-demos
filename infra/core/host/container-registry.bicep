@@ -10,8 +10,8 @@ param encryption object = {
   status: 'disabled'
 }
 param networkRuleBypassOptions string = 'AzureServices'
-param publicNetworkAccess string = useVnet ? 'Disabled' : 'Enabled' // Public network access is disabled if VNet integration is enabled
 param useVnet bool = false // Determines if VNet integration is enabled
+param usePrivateAcr bool = false // Determines if public network access should be disabled
 param sku object = {
   name: useVnet ? 'Premium' : 'Standard' // Use Premium if VNet is required, otherwise Standard
 }
@@ -32,7 +32,7 @@ resource containerRegistry 'Microsoft.ContainerRegistry/registries@2022-02-01-pr
     dataEndpointEnabled: dataEndpointEnabled
     encryption: encryption
     networkRuleBypassOptions: networkRuleBypassOptions
-    publicNetworkAccess: publicNetworkAccess
+    publicNetworkAccess: usePrivateAcr ? 'Disabled' : 'Enabled'
     zoneRedundancy: zoneRedundancy
   }
 }

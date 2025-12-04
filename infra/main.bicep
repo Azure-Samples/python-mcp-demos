@@ -12,8 +12,8 @@ param location string
 @description('Id of the user or app to assign application roles')
 param principalId string = ''
 
-param acaExists bool = false
-param mcpnoauthExists bool = false
+param serverExists bool = false
+param agentExists bool = false
 param keycloakExists bool = false
 
 @description('Location for the OpenAI resource group')
@@ -58,6 +58,12 @@ param keycloakRealmName string = 'mcp'
 
 @description('Audience claim for MCP server tokens')
 param mcpServerAudience string = 'mcp-server'
+
+@description('Flag to restrict ACR public network access (requires VPN for local image push when true)')
+param usePrivateAcr bool = false
+
+@description('Flag to restrict Log Analytics public query access for increased security')
+param usePrivateLogAnalytics bool = false
 
 var resourceToken = toLower(uniqueString(subscription().id, name, location))
 var tags = { 'azd-env-name': name }
@@ -165,8 +171,22 @@ module logAnalyticsWorkspace 'br/public:avm/res/operational-insights/workspace:0
     skuName: 'PerGB2018'
     dataRetention: 30
     publicNetworkAccessForIngestion: useVnet ? 'Disabled' : 'Enabled'
-    publicNetworkAccessForQuery: useVnet ? 'Disabled' : 'Enabled'
+    publicNetworkAccessForQuery: usePrivateLogAnalytics ? 'Disabled' : 'Enabled'
     useResourcePermissions: true
+  }
+}
+
+// Application Insights for telemetry
+module applicationInsights 'br/public:avm/res/insights/component:0.4.2' = if (useMonitoring) {
+  name: 'applicationinsights'
+  scope: resourceGroup
+  params: {
+    name: '${prefix}-appinsights'
+    location: location
+    tags: tags
+    workspaceResourceId: logAnalyticsWorkspace.?outputs.resourceId!
+    kind: 'web'
+    applicationType: 'web'
   }
 }
 
@@ -553,7 +573,7 @@ module monitorPrivateLinkScope 'br/public:avm/res/insights/private-link-scope:0.
     tags: tags
     accessModeSettings: {
       ingestionAccessMode: 'PrivateOnly'
-      queryAccessMode: 'PrivateOnly'
+      queryAccessMode: usePrivateLogAnalytics ? 'PrivateOnly' : 'Open'
     }
     scopedResources: [
       {
@@ -605,6 +625,7 @@ module containerApps 'core/host/container-apps.bicep' = {
     vnetName: useVnet ? virtualNetwork!.outputs.name : ''
     subnetName: useVnet ? virtualNetwork!.outputs.subnetNames[0] : ''
     usePrivateIngress: usePrivateIngress
+    usePrivateAcr: usePrivateAcr
   }
 }
 
@@ -668,15 +689,15 @@ module cosmosDbPrivateEndpoint 'br/public:avm/res/network/private-endpoint:0.11.
   }
 }
 
-// Container app frontend
-module aca 'aca.bicep' = {
-  name: 'aca'
+// Container app for MCP server
+module server 'server.bicep' = {
+  name: 'server'
   scope: resourceGroup
   params: {
-    name: replace('${take(prefix,19)}-ca', '--', '-')
+    name: replace('${take(prefix,15)}-server', '--', '-')
     location: location
     tags: tags
-    identityName: '${prefix}-id-aca'
+    identityName: '${prefix}-id-server'
     containerAppsEnvironmentName: containerApps.outputs.environmentName
     containerRegistryName: containerApps.outputs.registryName
     openAiDeploymentName: openAiDeploymentName
@@ -684,32 +705,31 @@ module aca 'aca.bicep' = {
     cosmosDbAccount: cosmosDb.outputs.name
     cosmosDbDatabase: cosmosDbDatabaseName
     cosmosDbContainer: cosmosDbContainerName
-    exists: acaExists
+    applicationInsightsConnectionString: useMonitoring ? applicationInsights!.outputs.connectionString : ''
+    exists: serverExists
     // Keycloak authentication configuration
-    // Use direct Keycloak URL for issuer validation (tokens are issued with this URL)
     keycloakRealmUrl: '${keycloak.outputs.uri}/realms/${keycloakRealmName}'
     mcpServerBaseUrl: 'https://mcproutes.${containerApps.outputs.defaultDomain}'
     mcpServerAudience: mcpServerAudience
   }
 }
 
-// MCP Server without authentication (deployed_mcp.py)
-module mcpnoauth 'aca-noauth.bicep' = {
-  name: 'mcpnoauth'
+// Container app for agent
+module agent 'agent.bicep' = {
+  name: 'agent'
   scope: resourceGroup
   params: {
-    name: replace('${take(prefix,19)}-na', '--', '-')
+    name: replace('${take(prefix,15)}-agent', '--', '-')
     location: location
     tags: tags
-    identityName: '${prefix}-id-mcpnoauth'
+    identityName: '${prefix}-id-agent'
     containerAppsEnvironmentName: containerApps.outputs.environmentName
     containerRegistryName: containerApps.outputs.registryName
     openAiDeploymentName: openAiDeploymentName
     openAiEndpoint: openAi.outputs.endpoint
-    cosmosDbAccount: cosmosDb.outputs.name
-    cosmosDbDatabase: cosmosDbDatabaseName
-    cosmosDbContainer: cosmosDbContainerName
-    exists: mcpnoauthExists
+    mcpServerUrl: 'https://mcproutes.${containerApps.outputs.defaultDomain}/mcp'
+    keycloakRealmUrl: '${keycloak.outputs.uri}/realms/${keycloakRealmName}'
+    exists: agentExists
   }
 }
 
@@ -736,7 +756,7 @@ module httpRoutes 'http-routes.bicep' = {
   scope: resourceGroup
   params: {
     containerAppsEnvironmentName: containerApps.outputs.environmentName
-    mcpServerAppName: aca.outputs.name
+    mcpServerAppName: server.outputs.name
     keycloakAppName: keycloak.outputs.name
   }
 }
@@ -751,11 +771,21 @@ module openAiRoleUser 'core/security/role.bicep' = {
   }
 }
 
-module openAiRoleBackend 'core/security/role.bicep' = {
+module openAiRoleServer 'core/security/role.bicep' = {
   scope: resourceGroup
-  name: 'openai-role-backend'
+  name: 'openai-role-server'
   params: {
-    principalId: aca.outputs.identityPrincipalId
+    principalId: server.outputs.identityPrincipalId
+    roleDefinitionId: '5e0bd9bd-7b93-4f28-af87-19fc36ad61bd' // Cognitive Services OpenAI User
+    principalType: 'ServicePrincipal'
+  }
+}
+
+module openAiRoleAgent 'core/security/role.bicep' = {
+  scope: resourceGroup
+  name: 'openai-role-agent'
+  params: {
+    principalId: agent.outputs.identityPrincipalId
     roleDefinitionId: '5e0bd9bd-7b93-4f28-af87-19fc36ad61bd' // Cognitive Services OpenAI User
     principalType: 'ServicePrincipal'
   }
@@ -772,24 +802,13 @@ module cosmosDbRoleUser 'core/security/documentdb-sql-role.bicep' = {
   }
 }
 
-// Cosmos DB Data Contributor role for backend
-module cosmosDbRoleBackend 'core/security/documentdb-sql-role.bicep' = {
+// Cosmos DB Data Contributor role for server
+module cosmosDbRoleServer 'core/security/documentdb-sql-role.bicep' = {
   scope: resourceGroup
-  name: 'cosmosdb-role-backend'
+  name: 'cosmosdb-role-server'
   params: {
     databaseAccountName: cosmosDb.outputs.name
-    principalId: aca.outputs.identityPrincipalId
-    roleDefinitionId: '/${subscription().id}/resourceGroups/${resourceGroup.name}/providers/Microsoft.DocumentDB/databaseAccounts/${cosmosDb.outputs.name}/sqlRoleDefinitions/00000000-0000-0000-0000-000000000002'
-  }
-}
-
-// Cosmos DB Data Contributor role for mcpnoauth (no-auth MCP server)
-module cosmosDbRoleMcpNoAuth 'core/security/documentdb-sql-role.bicep' = {
-  scope: resourceGroup
-  name: 'cosmosdb-role-mcpnoauth'
-  params: {
-    databaseAccountName: cosmosDb.outputs.name
-    principalId: mcpnoauth.outputs.identityPrincipalId
+    principalId: server.outputs.identityPrincipalId
     roleDefinitionId: '/${subscription().id}/resourceGroups/${resourceGroup.name}/providers/Microsoft.DocumentDB/databaseAccounts/${cosmosDb.outputs.name}/sqlRoleDefinitions/00000000-0000-0000-0000-000000000002'
   }
 }
@@ -804,18 +823,19 @@ output AZURE_OPENAI_ENDPOINT string = openAi.outputs.endpoint
 output AZURE_OPENAI_RESOURCE string = openAi.outputs.name
 output AZURE_OPENAI_RESOURCE_LOCATION string = openAi.outputs.location
 
-output SERVICE_ACA_IDENTITY_PRINCIPAL_ID string = aca.outputs.identityPrincipalId
-output SERVICE_ACA_NAME string = aca.outputs.name
-output SERVICE_ACA_URI string = aca.outputs.uri
-output SERVICE_ACA_IMAGE_NAME string = aca.outputs.imageName
+output SERVICE_SERVER_IDENTITY_PRINCIPAL_ID string = server.outputs.identityPrincipalId
+output SERVICE_SERVER_NAME string = server.outputs.name
+output SERVICE_SERVER_URI string = server.outputs.uri
+output SERVICE_SERVER_IMAGE_NAME string = server.outputs.imageName
+
+output SERVICE_AGENT_IDENTITY_PRINCIPAL_ID string = agent.outputs.identityPrincipalId
+output SERVICE_AGENT_NAME string = agent.outputs.name
+output SERVICE_AGENT_URI string = agent.outputs.uri
+output SERVICE_AGENT_IMAGE_NAME string = agent.outputs.imageName
 
 output SERVICE_KEYCLOAK_NAME string = keycloak.outputs.name
 output SERVICE_KEYCLOAK_URI string = keycloak.outputs.uri
 output SERVICE_KEYCLOAK_IMAGE_NAME string = keycloak.outputs.imageName
-
-output SERVICE_MCPNOAUTH_NAME string = mcpnoauth.outputs.name
-output SERVICE_MCPNOAUTH_URI string = mcpnoauth.outputs.uri
-output SERVICE_MCPNOAUTH_IMAGE_NAME string = mcpnoauth.outputs.imageName
 
 output AZURE_CONTAINER_ENVIRONMENT_NAME string = containerApps.outputs.environmentName
 output AZURE_CONTAINER_REGISTRY_ENDPOINT string = containerApps.outputs.registryLoginServer
@@ -825,6 +845,9 @@ output AZURE_COSMOSDB_ACCOUNT string = cosmosDb.outputs.name
 output AZURE_COSMOSDB_ENDPOINT string = cosmosDb.outputs.endpoint
 output AZURE_COSMOSDB_DATABASE string = cosmosDbDatabaseName
 output AZURE_COSMOSDB_CONTAINER string = cosmosDbContainerName
+
+// We typically do not output sensitive values, but App Insights connection strings are not considered highly sensitive
+output APPLICATIONINSIGHTS_CONNECTION_STRING string = useMonitoring ? applicationInsights!.outputs.connectionString : ''
 
 // Keycloak and MCP Server routing outputs
 output HTTP_ROUTES_URL string = httpRoutes.outputs.routeConfigUrl

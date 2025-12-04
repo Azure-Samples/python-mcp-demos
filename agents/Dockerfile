@@ -30,11 +30,9 @@ RUN addgroup -S app && adduser -S app -G app
 
 COPY --from=build --chown=app:app /code /code
 
-WORKDIR /code/servers
+WORKDIR /code/agents
 USER app
 
 ENV PATH="/code/.venv/bin:$PATH"
 
-EXPOSE 8000
-
-ENTRYPOINT ["uvicorn", "keycloak_deployed_mcp:app", "--host", "0.0.0.0", "--port", "8000"]
+ENTRYPOINT ["python", "agentframework_http.py"]

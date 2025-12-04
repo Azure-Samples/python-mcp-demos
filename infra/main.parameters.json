@@ -20,11 +20,17 @@
       "usePrivateIngress": {
         "value": "${USE_PRIVATE_INGRESS=false}"
       },
-      "acaExists": {
-        "value": "${SERVICE_ACA_RESOURCE_EXISTS=false}"
+      "usePrivateAcr": {
+        "value": "${USE_PRIVATE_ACR=false}"
       },
-      "mcpnoauthExists": {
-        "value": "${SERVICE_MCPNOAUTH_RESOURCE_EXISTS=false}"
+      "usePrivateLogAnalytics": {
+        "value": "${USE_PRIVATE_LOGANALYTICS=false}"
+      },
+      "serverExists": {
+        "value": "${SERVICE_SERVER_RESOURCE_EXISTS=false}"
+      },
+      "agentExists": {
+        "value": "${SERVICE_AGENT_RESOURCE_EXISTS=false}"
       },
       "keycloakExists": {
         "value": "${SERVICE_KEYCLOAK_RESOURCE_EXISTS=false}"
