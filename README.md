@@ -72,14 +72,15 @@ If you're not using one of the above options, then you'll need to:
 
 ## Run local MCP servers
 
-This project includes two MCP servers in the [`servers/`](servers/) directory:
+This project includes MCP servers in the [`servers/`](servers/) directory:
 
 | File | Description |
 |------|-------------|
 | [servers/basic_mcp_stdio.py](servers/basic_mcp_stdio.py) | MCP server with stdio transport for VS Code integration |
 | [servers/basic_mcp_http.py](servers/basic_mcp_http.py) | MCP server with HTTP transport on port 8000 |
+| [servers/deployed_mcp.py](servers/deployed_mcp.py) | MCP server for Azure deployment with Cosmos DB and optional Keycloak auth |
 
-Both servers implement an "Expenses Tracker" with a tool to add expenses to a CSV file.
+The local servers (`basic_mcp_stdio.py` and `basic_mcp_http.py`) implement an "Expenses Tracker" with a tool to add expenses to a CSV file.
 
 ### Use with GitHub Copilot
 
