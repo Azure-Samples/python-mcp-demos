@@ -332,7 +332,7 @@ This project supports deploying with OAuth 2.0 authentication using Keycloak as 
 
 ### Testing with the agent
 
-1. Generate the local environment file:
+1. Generate the local environment file (automatically created after `azd up`):
 
    ```bash
    ./infra/write_env.sh
@@ -346,18 +346,7 @@ This project supports deploying with OAuth 2.0 authentication using Keycloak as 
    uv run agents/agentframework_http.py
    ```
 
-   The agent automatically detects `KEYCLOAK_REALM_URL` in the environment and authenticates via DCR + client credentials.
-
-   Expected output:
-
-   ```text
-   INFO     🔐 Auth enabled - connecting to https://mcproutes.<env>.azurecontainerapps.io/mcp with Bearer token
-   INFO     📝 Registering client via DCR...
-   INFO     ✅ Registered client: agentframework-20251205-...
-   INFO     🔑 Getting access token from Keycloak...
-   INFO     ✅ Got access token (expires in 300s)
-   The expense of $1200.0 for 'laptop' on 2025-12-04 has been successfully added.
-   ```
+   The agent automatically detects `KEYCLOAK_REALM_URL` in the environment and authenticates via DCR + client credentials. On success, it will add an expense and print the result.
 
 ### Known limitations (demo trade-offs)
 
