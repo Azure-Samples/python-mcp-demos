@@ -173,9 +173,9 @@ You can use the [.NET Aspire Dashboard](https://learn.microsoft.com/dotnet/aspir
 2. Set the environment variable and start the HTTP server:
 
    ```bash
-   export OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4317
    uv run servers/basic_mcp_http.py
    ```
+
 
 3. View the dashboard at: http://localhost:18888
 
