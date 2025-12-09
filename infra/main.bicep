@@ -68,6 +68,16 @@ param usePrivateAcr bool = false
 @description('Flag to restrict Log Analytics public query access for increased security')
 param usePrivateLogAnalytics bool = false
 
+@description('Flag to enable Azure/Entra ID OAuth Proxy authentication for the MCP server')
+param useFastMcpAuth bool = false
+
+@description('Azure/Entra ID app registration client ID for OAuth Proxy - required when useEntraProxy is true')
+param entraProxyClientId string = ''
+
+@secure()
+@description('Azure/Entra ID app registration client secret for OAuth Proxy - required when useEntraProxy is true')
+param entraProxyClientSecret string = ''
+
 var resourceToken = toLower(uniqueString(subscription().id, name, location))
 var tags = { 'azd-env-name': name }
 
@@ -85,6 +95,8 @@ var openAiModelName = 'gpt-4o-mini'
 // Cosmos DB configuration
 var cosmosDbDatabaseName = 'expenses-database'
 var cosmosDbContainerName = 'expenses'
+var cosmosDbOAuthContainerName = 'oauth-clients'
+var cosmosDbUserContainerName = 'user-expenses'
 
 module openAi 'br/public:avm/res/cognitive-services/account:0.7.2' = {
   name: 'openai'
@@ -156,6 +168,20 @@ module cosmosDb 'br/public:avm/res/document-db/database-account:0.6.1' = {
             kind: 'Hash'
             paths: [
               '/category'
+            ]
+          }
+          {
+            name: cosmosDbUserContainerName
+            kind: 'Hash'
+            paths: [
+              '/user_id'
+            ]
+          }
+          {
+            name: cosmosDbOAuthContainerName
+            kind: 'Hash'
+            paths: [
+              '/collection'
             ]
           }
         ]
@@ -708,12 +734,19 @@ module server 'server.bicep' = {
     cosmosDbAccount: cosmosDb.outputs.name
     cosmosDbDatabase: cosmosDbDatabaseName
     cosmosDbContainer: cosmosDbContainerName
+    cosmosDbUserContainer: cosmosDbUserContainerName
+    cosmosDbOAuthContainer: cosmosDbOAuthContainerName
     applicationInsightsConnectionString: useMonitoring ? applicationInsights!.outputs.connectionString : ''
     exists: serverExists
     // Keycloak authentication configuration (only when enabled)
     keycloakRealmUrl: useKeycloak ? '${keycloak!.outputs.uri}/realms/${keycloakRealmName}' : ''
     mcpServerBaseUrl: useKeycloak ? 'https://mcproutes.${containerApps.outputs.defaultDomain}' : ''
     keycloakMcpServerAudience: keycloakMcpServerAudience
+    // Azure/Entra ID OAuth Proxy authentication configuration (only when enabled)
+    entraProxyClientId: useFastMcpAuth ? entraProxyClientId : ''
+    entraProxyClientSecret: useFastMcpAuth ? entraProxyClientSecret : ''
+    entraProxyBaseUrl: useFastMcpAuth ? 'https://${replace('${take(prefix,15)}-server', '--', '-')}.${containerApps.outputs.defaultDomain}' : ''
+    tenantId: useFastMcpAuth ? tenant().tenantId : ''
   }
 }
 
@@ -848,14 +881,24 @@ output AZURE_COSMOSDB_ACCOUNT string = cosmosDb.outputs.name
 output AZURE_COSMOSDB_ENDPOINT string = cosmosDb.outputs.endpoint
 output AZURE_COSMOSDB_DATABASE string = cosmosDbDatabaseName
 output AZURE_COSMOSDB_CONTAINER string = cosmosDbContainerName
+output AZURE_COSMOSDB_USER_CONTAINER string = cosmosDbUserContainerName
+output AZURE_COSMOSDB_OAUTH_CONTAINER string = cosmosDbOAuthContainerName
 
 // We typically do not output sensitive values, but App Insights connection strings are not considered highly sensitive
 output APPLICATIONINSIGHTS_CONNECTION_STRING string = useMonitoring ? applicationInsights!.outputs.connectionString : ''
 
-// Keycloak and MCP Server routing outputs (only populated when useKeycloak is true)
-output HTTP_ROUTES_URL string = useKeycloak ? httpRoutes!.outputs.routeConfigUrl : ''
-output KEYCLOAK_URL string = useKeycloak ? '${httpRoutes!.outputs.routeConfigUrl}/auth' : ''
-output KEYCLOAK_REALM_URL string = useKeycloak ? '${httpRoutes!.outputs.routeConfigUrl}/auth/realms/${keycloakRealmName}' : ''
+// Entry selection for MCP server (auth-enabled when Keycloak or FastMCP auth is used)
+// Use server module's computed entry selection (checks URLs/clientId)
+output MCP_ENTRY string = server.outputs.mcpEntry
+
+// Output the deployed MCP server HOST only (no /mcp). Python app will append /mcp as needed.
 output MCP_SERVER_URL string = useKeycloak ? httpRoutes!.outputs.routeConfigUrl : server.outputs.uri
+
+// Keycloak and MCP Server routing outputs (only populated when useKeycloak is true)
+output KEYCLOAK_REALM_URL string = useKeycloak ? '${httpRoutes!.outputs.routeConfigUrl}/auth/realms/${keycloakRealmName}' : ''
 output KEYCLOAK_ADMIN_CONSOLE string = useKeycloak ? '${httpRoutes!.outputs.routeConfigUrl}/auth/admin' : ''
 output KEYCLOAK_DIRECT_URL string = keycloak.outputs.uri
+
+// Auth feature flags for env scripts
+output USE_KEYCLOAK bool = useKeycloak
+output USE_FASTMCP_AUTH bool = useFastMcpAuth

@@ -29,12 +29,23 @@ services:
       path: ./agents/Dockerfile
       context: .
 hooks:
+  preprovision:
+    windows:
+      shell: pwsh
+      run: ./infra/auth_init.ps1
+      interactive: true
+      continueOnError: false
+    posix:
+      shell: sh
+      run: ./infra/auth_init.sh
+      interactive: true
+      continueOnError: false
   postprovision:
     posix:
       shell: sh
-      run: ./infra/write_env.sh
+      run: ./infra/write_env.sh && ./infra/auth_update.sh
       continueOnError: true
     windows:
       shell: pwsh
-      run: ./infra/write_env.ps1
+      run: ./infra/write_env.ps1; ./infra/auth_update.ps1
       continueOnError: true

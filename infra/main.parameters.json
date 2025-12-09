@@ -49,6 +49,16 @@
       },
       "keycloakMcpServerAudience": {
         "value": "${KEYCLOAK_MCP_SERVER_AUDIENCE=mcp-server}"
+      },
+      "useFastMcpAuth": {
+        "value": "${USE_FASTMCP_AUTH=false}"
+      },
+
+      "entraProxyClientId": {
+        "value": "${FASTMCP_AUTH_AZURE_CLIENT_ID}"
+      },
+      "entraProxyClientSecret": {
+        "value": "${FASTMCP_AUTH_AZURE_CLIENT_SECRET}"
       }
     }
   }

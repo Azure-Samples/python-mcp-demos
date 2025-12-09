@@ -14,10 +14,8 @@ from azure.identity.aio import DefaultAzureCredential, ManagedIdentityCredential
 from azure.monitor.opentelemetry import configure_azure_monitor
 from dotenv import load_dotenv
 from fastmcp import FastMCP
-from fastmcp.server.auth import RemoteAuthProvider
-from fastmcp.server.auth.providers.jwt import JWTVerifier
+from fastmcp.server.dependencies import get_access_token
 from opentelemetry.instrumentation.starlette import StarletteInstrumentor
-from pydantic import AnyHttpUrl
 from starlette.responses import JSONResponse
 
 try:
@@ -50,28 +48,8 @@ AZURE_COSMOSDB_DATABASE = os.environ["AZURE_COSMOSDB_DATABASE"]
 AZURE_COSMOSDB_CONTAINER = os.environ["AZURE_COSMOSDB_CONTAINER"]
 AZURE_CLIENT_ID = os.getenv("AZURE_CLIENT_ID", "")
 
-# Optional: Keycloak authentication (enabled if KEYCLOAK_REALM_URL is set)
-KEYCLOAK_REALM_URL = os.getenv("KEYCLOAK_REALM_URL")
-MCP_SERVER_BASE_URL = os.getenv("MCP_SERVER_BASE_URL")
-KEYCLOAK_MCP_SERVER_AUDIENCE = os.getenv("KEYCLOAK_MCP_SERVER_AUDIENCE", "mcp-server")
 
-auth = None
-if KEYCLOAK_REALM_URL and MCP_SERVER_BASE_URL:
-    token_verifier = JWTVerifier(
-        jwks_uri=f"{KEYCLOAK_REALM_URL}/protocol/openid-connect/certs",
-        issuer=KEYCLOAK_REALM_URL,
-        audience=KEYCLOAK_MCP_SERVER_AUDIENCE,
-    )
-    auth = RemoteAuthProvider(
-        token_verifier=token_verifier,
-        authorization_servers=[AnyHttpUrl(KEYCLOAK_REALM_URL)],
-        base_url=MCP_SERVER_BASE_URL,
-    )
-    logger.info(f"Keycloak auth enabled: realm={KEYCLOAK_REALM_URL}, audience={KEYCLOAK_MCP_SERVER_AUDIENCE}")
-else:
-    logger.info("No authentication configured (set KEYCLOAK_REALM_URL and MCP_SERVER_BASE_URL to enable)")
-
-# Configure Cosmos DB client and container
+# Configure Cosmos DB client and container for expenses data
 if RUNNING_IN_PRODUCTION and AZURE_CLIENT_ID:
     credential = ManagedIdentityCredential(client_id=AZURE_CLIENT_ID)
 else:
@@ -85,8 +63,31 @@ cosmos_db = cosmos_client.get_database_client(AZURE_COSMOSDB_DATABASE)
 cosmos_container = cosmos_db.get_container_client(AZURE_COSMOSDB_CONTAINER)
 logger.info(f"Connected to Cosmos DB: {AZURE_COSMOSDB_ACCOUNT}")
 
+# No OAuth client storage used in non-auth deployment
+
+# Authentication disabled in this deployment
+auth = None
+
+# Create the MCP server
 mcp = FastMCP("Expenses Tracker", auth=auth)
+
+# Add OpenTelemetry middleware for distributed tracing
 mcp.add_middleware(OpenTelemetryMiddleware("ExpensesMCP"))
+
+
+def get_user_id_from_token() -> str | None:
+    """Extract the authenticated user's object ID (oid) from access token claims.
+
+    Returns None if no token is present or oid is missing.
+    """
+    try:
+        token = get_access_token()
+        if token and hasattr(token, "claims"):
+            claims = token.claims or {}
+            return claims.get("oid")
+        return None
+    except Exception:
+        return None
 
 
 @mcp.custom_route("/health", methods=["GET"])
@@ -135,6 +136,9 @@ async def add_expense(
     logger.info(f"Adding expense: ${amount} for {description} on {date_iso}")
 
     try:
+        # Extract user_id from token via helper (no verbose logging)
+        user_id = get_user_id_from_token()
+
         expense_id = str(uuid.uuid4())
         expense_item = {
             "id": expense_id,
@@ -144,6 +148,10 @@ async def add_expense(
             "description": description,
             "payment_method": payment_method.value,
         }
+
+        # Attach user context based on token claims when available
+        if user_id:
+            expense_item["user_id"] = user_id
 
         await cosmos_container.create_item(body=expense_item)
         return f"Successfully added expense: ${amount} for {description} on {date_iso}"
@@ -156,13 +164,12 @@ async def add_expense(
 @mcp.resource("resource://expenses")
 async def get_expenses_data():
     """Get raw expense data from Cosmos DB."""
-    logger.info("Expenses data accessed")
 
     try:
         query = "SELECT * FROM c ORDER BY c.date DESC"
         expenses_data = []
 
-        async for item in cosmos_container.query_items(query=query, enable_cross_partition_query=True):
+        async for item in cosmos_container.query_items(query=query):
             expenses_data.append(item)
 
         if not expenses_data:
