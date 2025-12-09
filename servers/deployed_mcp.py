@@ -14,7 +14,6 @@ from azure.identity.aio import DefaultAzureCredential, ManagedIdentityCredential
 from azure.monitor.opentelemetry import configure_azure_monitor
 from dotenv import load_dotenv
 from fastmcp import FastMCP
-from fastmcp.server.dependencies import get_access_token
 from opentelemetry.instrumentation.starlette import StarletteInstrumentor
 from starlette.responses import JSONResponse
 
@@ -63,46 +62,8 @@ cosmos_db = cosmos_client.get_database_client(AZURE_COSMOSDB_DATABASE)
 cosmos_container = cosmos_db.get_container_client(AZURE_COSMOSDB_CONTAINER)
 logger.info(f"Connected to Cosmos DB: {AZURE_COSMOSDB_ACCOUNT}")
 
-# No OAuth client storage used in non-auth deployment
-
-# Authentication disabled in this deployment
-auth = None
-
-# Create the MCP server
-mcp = FastMCP("Expenses Tracker", auth=auth)
-
-# Add OpenTelemetry middleware for distributed tracing
-mcp.add_middleware(OpenTelemetryMiddleware("ExpensesMCP"))
-
-
-def get_user_id_from_token() -> str | None:
-    """Extract the authenticated user's object ID (oid) from access token claims.
-
-    Returns None if no token is present or oid is missing.
-    """
-    try:
-        token = get_access_token()
-        if token and hasattr(token, "claims"):
-            claims = token.claims or {}
-            return claims.get("oid")
-        return None
-    except Exception:
-        return None
-
-
-@mcp.custom_route("/health", methods=["GET"])
-async def health_check(_request):
-    """
-    Health check endpoint for service availability.
-
-    This endpoint is used by Azure Container Apps health probes to verify that the service is running.
-    Returns a JSON response with the following format:
-        {
-            "status": "healthy",
-            "service": "mcp-server"
-        }
-    """
-    return JSONResponse({"status": "healthy", "service": "mcp-server"})
+# Create the MCP server with OpenTelemetry middleware
+mcp = FastMCP("Expenses Tracker", middleware=[OpenTelemetryMiddleware("ExpensesMCP")])
 
 
 class PaymentMethod(Enum):
@@ -136,9 +97,6 @@ async def add_expense(
     logger.info(f"Adding expense: ${amount} for {description} on {date_iso}")
 
     try:
-        # Extract user_id from token via helper (no verbose logging)
-        user_id = get_user_id_from_token()
-
         expense_id = str(uuid.uuid4())
         expense_item = {
             "id": expense_id,
@@ -148,10 +106,6 @@ async def add_expense(
             "description": description,
             "payment_method": payment_method.value,
         }
-
-        # Attach user context based on token claims when available
-        if user_id:
-            expense_item["user_id"] = user_id
 
         await cosmos_container.create_item(body=expense_item)
         return f"Successfully added expense: ${amount} for {description} on {date_iso}"
@@ -164,12 +118,13 @@ async def add_expense(
 @mcp.resource("resource://expenses")
 async def get_expenses_data():
     """Get raw expense data from Cosmos DB."""
+    logger.info("Expenses data accessed")
 
     try:
         query = "SELECT * FROM c ORDER BY c.date DESC"
         expenses_data = []
 
-        async for item in cosmos_container.query_items(query=query):
+        async for item in cosmos_container.query_items(query=query, enable_cross_partition_query=True):
             expenses_data.append(item)
 
         if not expenses_data:
@@ -220,6 +175,21 @@ def analyze_spending_prompt(
 
     Use the expense data to generate actionable insights.
     """
+
+
+@mcp.custom_route("/health", methods=["GET"])
+async def health_check(_request):
+    """
+    Health check endpoint for service availability.
+
+    This endpoint is used by Azure Container Apps health probes to verify that the service is running.
+    Returns a JSON response with the following format:
+        {
+            "status": "healthy",
+            "service": "mcp-server"
+        }
+    """
+    return JSONResponse({"status": "healthy", "service": "mcp-server"})
 
 
 # ASGI application for uvicorn

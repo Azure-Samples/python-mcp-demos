@@ -27,7 +27,7 @@
 				"0.0.0.0:5678",
 				"servers/basic_mcp_stdio.py"
 			]
-		}
+		},
 	},
 	"inputs": []
 }
