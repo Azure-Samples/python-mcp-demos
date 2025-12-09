@@ -1,6 +1,59 @@
+import logging
+import os
+
 from fastmcp.server.middleware import Middleware, MiddlewareContext
-from opentelemetry import trace
+from opentelemetry import metrics, trace
+from opentelemetry._logs import set_logger_provider
+from opentelemetry.exporter.otlp.proto.grpc._log_exporter import OTLPLogExporter
+from opentelemetry.exporter.otlp.proto.grpc.metric_exporter import OTLPMetricExporter
+from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import OTLPSpanExporter
+from opentelemetry.sdk._logs import LoggerProvider, LoggingHandler  # _logs is "experimental", not "private"
+from opentelemetry.sdk._logs.export import BatchLogRecordProcessor
+from opentelemetry.sdk.metrics import MeterProvider
+from opentelemetry.sdk.metrics.export import PeriodicExportingMetricReader
+from opentelemetry.sdk.resources import Resource
+from opentelemetry.sdk.trace import TracerProvider
+from opentelemetry.sdk.trace.export import BatchSpanProcessor
 from opentelemetry.trace import Status, StatusCode
+
+
+def configure_aspire_dashboard(service_name: str = "expenses-mcp"):
+    """Configure OpenTelemetry to send telemetry to the Aspire standalone dashboard.
+
+    Requires the OTEL_EXPORTER_OTLP_ENDPOINT environment variable to be set.
+    """
+    otlp_endpoint = os.getenv("OTEL_EXPORTER_OTLP_ENDPOINT")
+    if not otlp_endpoint:
+        raise ValueError("OTEL_EXPORTER_OTLP_ENDPOINT environment variable must be set to configure telemetry export.")
+
+    # Create resource with service name
+    resource = Resource.create({"service.name": service_name})
+
+    # Configure Tracing
+    tracer_provider = TracerProvider(resource=resource)
+    tracer_provider.add_span_processor(BatchSpanProcessor(OTLPSpanExporter(endpoint=otlp_endpoint)))
+    trace.set_tracer_provider(tracer_provider)
+
+    # Configure Metrics
+    metric_reader = PeriodicExportingMetricReader(OTLPMetricExporter(endpoint=otlp_endpoint))
+    meter_provider = MeterProvider(resource=resource, metric_readers=[metric_reader])
+    metrics.set_meter_provider(meter_provider)
+
+    # Configure Logging
+    logger_provider = LoggerProvider(resource=resource)
+    logger_provider.add_log_record_processor(BatchLogRecordProcessor(OTLPLogExporter(endpoint=otlp_endpoint)))
+    set_logger_provider(logger_provider)
+
+    # Add logging handler to send Python logs to OTLP
+    root_logger = logging.getLogger()
+    handler_exists = any(
+        isinstance(existing, LoggingHandler) and getattr(existing, "logger_provider", None) is logger_provider
+        for existing in root_logger.handlers
+    )
+
+    if not handler_exists:
+        handler = LoggingHandler(level=logging.NOTSET, logger_provider=logger_provider)
+        root_logger.addHandler(handler)
 
 
 class OpenTelemetryMiddleware(Middleware):

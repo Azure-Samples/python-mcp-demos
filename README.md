@@ -12,6 +12,7 @@ A demonstration project showcasing Model Context Protocol (MCP) implementations 
   - [Use with GitHub Copilot](#use-with-github-copilot)
   - [Debug with VS Code](#debug-with-vs-code)
   - [Inspect with MCP inspector](#inspect-with-mcp-inspector)
+  - [View traces with Aspire Dashboard](#view-traces-with-aspire-dashboard)
 - [Run local Agents <-> MCP](#run-local-agents---mcp)
 - [Deploy to Azure](#deploy-to-azure)
 - [Deploy to Azure with private networking](#deploy-to-azure-with-private-networking)
@@ -155,6 +156,42 @@ The inspector provides a web interface to:
 - Test tool invocations with custom parameters
 - Inspect server responses and errors
 - Debug server communication
+
+### View traces with Aspire Dashboard
+
+You can use the [.NET Aspire Dashboard](https://learn.microsoft.com/dotnet/aspire/fundamentals/dashboard/standalone) to view OpenTelemetry traces, metrics, and logs from the MCP server.
+
+> **Note:** Aspire Dashboard integration is only configured for the HTTP server (`basic_mcp_http.py`).
+
+1. Start the Aspire Dashboard:
+
+   ```bash
+   docker run --rm -d -p 18888:18888 -p 4317:18889 --name aspire-dashboard \
+       mcr.microsoft.com/dotnet/aspire-dashboard:latest
+   ```
+
+   > The Aspire Dashboard exposes its OTLP endpoint on container port 18889. The mapping `-p 4317:18889` makes it available on the host's standard OTLP port 4317.
+
+   Get the dashboard URL and login token from the container logs:
+
+   ```bash
+   docker logs aspire-dashboard 2>&1 | grep "Login to the dashboard"
+   ```
+
+2. Enable OpenTelemetry by adding this to your `.env` file:
+
+   ```bash
+   OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4317
+   ```
+
+3. Start the HTTP server:
+
+   ```bash
+   uv run servers/basic_mcp_http.py
+   ```
+
+
+4. View the dashboard at: http://localhost:18888
 
 ---
 
