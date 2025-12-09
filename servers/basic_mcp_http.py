@@ -1,21 +1,32 @@
 import csv
 import logging
+import os
 from datetime import date
 from enum import Enum
 from pathlib import Path
 from typing import Annotated
 
 from fastmcp import FastMCP
+from opentelemetry_middleware import OpenTelemetryMiddleware, configure_aspire_dashboard
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(message)s")
 logger = logging.getLogger("ExpensesMCP")
+
+
+# Configure Aspire Dashboard telemetry if OTEL_EXPORTER_OTLP_ENDPOINT is set
+if os.getenv("OTEL_EXPORTER_OTLP_ENDPOINT"):
+    logger.info("Setting up Aspire Dashboard instrumentation (OTLP)")
+    configure_aspire_dashboard(service_name="expenses-mcp")
 
 
 SCRIPT_DIR = Path(__file__).parent
 EXPENSES_FILE = SCRIPT_DIR / "expenses.csv"
 
 
-mcp = FastMCP("Expenses Tracker")
+mcp = FastMCP(
+    "Expenses Tracker",
+    middleware=[OpenTelemetryMiddleware(tracer_name="expenses.mcp")]
+)
 
 
 class PaymentMethod(Enum):
