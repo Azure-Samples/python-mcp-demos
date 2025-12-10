@@ -76,7 +76,7 @@ async def main():
     print(f"  Existing redirect URIs: {len(existing_uris)}")
 
     # Add only the deployed server redirect URI to existing URIs
-    # (local/VS Code URIs are already set by ENTRA_PROXY_init.py during preprovision)
+    # (local/VS Code URIs are already set by auth_init.py during preprovision)
     redirect_uris = set(existing_uris)
     redirect_uris.add(redirect_uri)
 

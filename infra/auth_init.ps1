@@ -8,4 +8,4 @@ if ($MCP_AUTH_PROVIDER -ne "entra_proxy") {
 }
 
 Write-Host "Setting up Azure/Entra ID app registration for FastMCP OAuth Proxy..."
-python ./infra/ENTRA_PROXY_init.py
+python ./infra/auth_init.py
