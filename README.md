@@ -296,19 +296,25 @@ This project supports deploying with OAuth 2.0 authentication using Keycloak as 
 
 ### Deployment steps
 
-1. Set the Keycloak admin password (required):
+1. Enable Keycloak authentication:
+
+   ```bash
+   azd env set MCP_AUTH_PROVIDER keycloak
+   ```
+
+2. Set the Keycloak admin password (required):
 
    ```bash
    azd env set KEYCLOAK_ADMIN_PASSWORD "YourSecurePassword123!"
    ```
 
-2. Optionally customize the realm name (default: `mcp`):
+3. Optionally customize the realm name (default: `mcp`):
 
    ```bash
    azd env set KEYCLOAK_REALM_NAME "mcp"
    ```
 
-3. Deploy to Azure:
+4. Deploy to Azure:
 
    ```bash
    azd up
@@ -316,7 +322,7 @@ This project supports deploying with OAuth 2.0 authentication using Keycloak as 
 
    This will create the Azure Container Apps environment, deploy Keycloak with the pre-configured realm, deploy the MCP server with OAuth validation, and configure HTTP route-based routing.
 
-4. Verify deployment by checking the outputs:
+5. Verify deployment by checking the outputs:
 
    ```bash
    azd env get-value MCP_SERVER_URL
@@ -324,7 +330,7 @@ This project supports deploying with OAuth 2.0 authentication using Keycloak as 
    azd env get-value KEYCLOAK_ADMIN_CONSOLE
    ```
 
-5. Visit the Keycloak admin console to verify the realm is configured:
+6. Visit the Keycloak admin console to verify the realm is configured:
 
    ```text
    https://<your-mcproutes-url>/auth/admin
@@ -381,7 +387,7 @@ This project supports deploying with Microsoft Entra ID (Azure AD) authenticatio
 1. Enable Entra OAuth proxy:
 
    ```bash
-   azd env set USE_ENTRA_PROXY true
+   azd env set MCP_AUTH_PROVIDER entra_proxy
    ```
 
 2. Set your tenant ID so that the App Registration is created in the correct tenant:

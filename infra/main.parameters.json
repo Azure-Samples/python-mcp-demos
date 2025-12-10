@@ -26,8 +26,8 @@
       "usePrivateLogAnalytics": {
         "value": "${USE_PRIVATE_LOGANALYTICS=false}"
       },
-      "useKeycloak": {
-        "value": "${USE_KEYCLOAK=false}"
+      "mcpAuthProvider": {
+        "value": "${MCP_AUTH_PROVIDER=none}"
       },
       "serverExists": {
         "value": "${SERVICE_SERVER_RESOURCE_EXISTS=false}"
@@ -50,9 +50,7 @@
       "keycloakMcpServerAudience": {
         "value": "${KEYCLOAK_MCP_SERVER_AUDIENCE=mcp-server}"
       },
-      "useEntraProxy": {
-        "value": "${USE_ENTRA_PROXY=false}"
-      },
+
       "entraProxyClientId": {
         "value": "${ENTRA_PROXY_AZURE_CLIENT_ID}"
       },

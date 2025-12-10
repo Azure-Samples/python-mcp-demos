@@ -9,7 +9,7 @@ When adding new azd environment variables, update these files:
 1. **infra/main.parameters.json**: Add the new parameter mapping from azd env variable to Bicep parameter
    - Use format `${ENV_VAR_NAME}` for required values
    - Use format `${ENV_VAR_NAME=default}` for optional values with defaults
-   - Example: `"useEntraProxy": { "value": "${USE_ENTRA_PROXY=false}" }`
+   - Example: `"mcpAuthProvider": { "value": "${MCP_AUTH_PROVIDER=none}" }`
 
 2. **infra/main.bicep**: Add the Bicep parameter declaration at the top with `@description`
    - Use `@secure()` decorator for sensitive values like passwords/secrets

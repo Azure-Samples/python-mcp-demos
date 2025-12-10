@@ -46,20 +46,25 @@ param useVnet bool = false
 @description('Flag to enable or disable public ingress')
 param usePrivateIngress bool = false
 
-@description('Flag to enable or disable Keycloak authentication for the MCP server')
-param useKeycloak bool = false
+@description('Authentication provider for the MCP server')
+@allowed([
+  'none'
+  'keycloak'
+  'entra_proxy'
+])
+param mcpAuthProvider string = 'none'
 
 @description('Keycloak admin username')
 param keycloakAdminUser string = 'admin'
 
 @secure()
-@description('Keycloak admin password - required when useKeycloak is true')
+@description('Keycloak admin password - required when mcpAuthProvider is keycloak')
 param keycloakAdminPassword string = ''
 
 @description('Keycloak realm name for MCP authentication')
 param keycloakRealmName string = 'mcp'
 
-@description('Audience claim for MCP server tokens (only used when useKeycloak is true)')
+@description('Audience claim for MCP server tokens (only used when mcpAuthProvider is keycloak)')
 param keycloakMcpServerAudience string = 'mcp-server'
 
 @description('Flag to restrict ACR public network access (requires VPN for local image push when true)')
@@ -68,15 +73,16 @@ param usePrivateAcr bool = false
 @description('Flag to restrict Log Analytics public query access for increased security')
 param usePrivateLogAnalytics bool = false
 
-@description('Flag to enable Azure/Entra ID OAuth Proxy authentication for the MCP server')
-param useEntraProxy bool = false
-
-@description('Azure/Entra ID app registration client ID for OAuth Proxy - required when useEntraProxy is true')
+@description('Azure/Entra ID app registration client ID for OAuth Proxy - required when mcpAuthProvider is entra_proxy')
 param entraProxyClientId string = ''
 
 @secure()
-@description('Azure/Entra ID app registration client secret for OAuth Proxy - required when useEntraProxy is true')
+@description('Azure/Entra ID app registration client secret for OAuth Proxy - required when mcpAuthProvider is entra_proxy')
 param entraProxyClientSecret string = ''
+
+// Derived booleans for backward compatibility in bicep modules
+var useKeycloak = mcpAuthProvider == 'keycloak'
+var useEntraProxy = mcpAuthProvider == 'entra_proxy'
 
 var resourceToken = toLower(uniqueString(subscription().id, name, location))
 var tags = { 'azd-env-name': name }
@@ -751,8 +757,7 @@ module server 'server.bicep' = {
     entraProxyClientSecret: useEntraProxy ? entraProxyClientSecret : ''
     entraProxyBaseUrl: useEntraProxy ? entraProxyMcpServerBaseUrl : ''
     tenantId: useEntraProxy ? tenant().tenantId : ''
-    useKeycloak: useKeycloak
-    useEntraProxy: useEntraProxy
+    mcpAuthProvider: mcpAuthProvider
   }
 }
 
@@ -904,11 +909,10 @@ output MCP_SERVER_URL string = useKeycloak ? '${httpRoutes!.outputs.routeConfigU
 output ENTRA_PROXY_MCP_SERVER_BASE_URL string = useEntraProxy ? entraProxyMcpServerBaseUrl : ''
 output KEYCLOAK_MCP_SERVER_BASE_URL string = useKeycloak ? keycloakMcpServerBaseUrl : ''
 
-// Keycloak and MCP Server routing outputs (only populated when useKeycloak is true)
+// Keycloak and MCP Server routing outputs (only populated when mcpAuthProvider is keycloak)
 output KEYCLOAK_REALM_URL string = useKeycloak ? '${httpRoutes!.outputs.routeConfigUrl}/auth/realms/${keycloakRealmName}' : ''
 output KEYCLOAK_ADMIN_CONSOLE string = useKeycloak ? '${httpRoutes!.outputs.routeConfigUrl}/auth/admin' : ''
 output KEYCLOAK_DIRECT_URL string = keycloak.outputs.uri
 
-// Auth feature flags for env scripts
-output USE_KEYCLOAK bool = useKeycloak
-output USE_ENTRA_PROXY bool = useEntraProxy
+// Auth provider for env scripts
+output MCP_AUTH_PROVIDER string = mcpAuthProvider

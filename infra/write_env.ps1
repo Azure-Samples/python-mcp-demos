@@ -14,9 +14,7 @@ Add-Content -Path $ENV_FILE_PATH -Value "AZURE_COSMOSDB_CONTAINER=$(azd env get-
 Add-Content -Path $ENV_FILE_PATH -Value "AZURE_COSMOSDB_USER_CONTAINER=$(azd env get-value AZURE_COSMOSDB_USER_CONTAINER)"
 Add-Content -Path $ENV_FILE_PATH -Value "AZURE_COSMOSDB_OAUTH_CONTAINER=$(azd env get-value AZURE_COSMOSDB_OAUTH_CONTAINER)"
 Add-Content -Path $ENV_FILE_PATH -Value "APPLICATIONINSIGHTS_CONNECTION_STRING=$(azd env get-value APPLICATIONINSIGHTS_CONNECTION_STRING)"
-# Auth feature flags
-Add-Content -Path $ENV_FILE_PATH -Value "USE_ENTRA_PROXY=$(azd env get-value USE_ENTRA_PROXY)"
-Add-Content -Path $ENV_FILE_PATH -Value "USE_KEYCLOAK=$(azd env get-value USE_KEYCLOAK)"
+Add-Content -Path $ENV_FILE_PATH -Value "MCP_AUTH_PROVIDER=$(azd env get-value MCP_AUTH_PROVIDER)"
 $KEYCLOAK_REALM_URL = azd env get-value KEYCLOAK_REALM_URL 2>$null
 if ($KEYCLOAK_REALM_URL -and $KEYCLOAK_REALM_URL -ne "") {
     Add-Content -Path $ENV_FILE_PATH -Value "KEYCLOAK_REALM_URL=$KEYCLOAK_REALM_URL"
@@ -25,12 +23,10 @@ $ENTRA_PROXY_AZURE_CLIENT_ID = azd env get-value ENTRA_PROXY_AZURE_CLIENT_ID 2>$
 if ($ENTRA_PROXY_AZURE_CLIENT_ID -and $ENTRA_PROXY_AZURE_CLIENT_ID -ne "") {
     Add-Content -Path $ENV_FILE_PATH -Value "ENTRA_PROXY_AZURE_CLIENT_ID=$ENTRA_PROXY_AZURE_CLIENT_ID"
     Add-Content -Path $ENV_FILE_PATH -Value "ENTRA_PROXY_AZURE_CLIENT_SECRET=$(azd env get-value ENTRA_PROXY_AZURE_CLIENT_SECRET)"
-    # Specific base URL for Entra proxy from azd outputs
     $ENTRA_PROXY_MCP_SERVER_BASE_URL = azd env get-value ENTRA_PROXY_MCP_SERVER_BASE_URL 2>$null
     Add-Content -Path $ENV_FILE_PATH -Value "ENTRA_PROXY_MCP_SERVER_BASE_URL=$ENTRA_PROXY_MCP_SERVER_BASE_URL"
 }
 Add-Content -Path $ENV_FILE_PATH -Value "MCP_ENTRY=$(azd env get-value MCP_ENTRY)"
 Add-Content -Path $ENV_FILE_PATH -Value "MCP_SERVER_URL=$(azd env get-value MCP_SERVER_URL)"
- $KEYCLOAK_MCP_SERVER_BASE_URL = azd env get-value KEYCLOAK_MCP_SERVER_BASE_URL 2>$null
- Add-Content -Path $ENV_FILE_PATH -Value "KEYCLOAK_MCP_SERVER_BASE_URL=$KEYCLOAK_MCP_SERVER_BASE_URL"
+Add-Content -Path $ENV_FILE_PATH -Value "KEYCLOAK_MCP_SERVER_BASE_URL=$(azd env get-value KEYCLOAK_MCP_SERVER_BASE_URL)"
 Add-Content -Path $ENV_FILE_PATH -Value "API_HOST=azure"

@@ -23,8 +23,12 @@ param entraProxyClientId string = ''
 param entraProxyClientSecret string = ''
 param entraProxyBaseUrl string = ''
 param tenantId string = ''
-param useKeycloak bool = false
-param useEntraProxy bool = false
+@allowed([
+  'none'
+  'keycloak'
+  'entra_proxy'
+])
+param mcpAuthProvider string = 'none'
 
 // Base environment variables
 // Select MCP entrypoint based on configured auth (Keycloak or FastMCP Azure auth)
@@ -43,12 +47,8 @@ var baseEnv = [
     value: 'true'
   }
   {
-    name: 'USE_KEYCLOAK'
-    value: useKeycloak
-  }
-  {
-    name: 'USE_ENTRA_PROXY'
-    value: useEntraProxy
+    name: 'MCP_AUTH_PROVIDER'
+    value: mcpAuthProvider
   }
   {
     name: 'AZURE_CLIENT_ID'

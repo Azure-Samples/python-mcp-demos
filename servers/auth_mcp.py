@@ -75,7 +75,8 @@ cosmos_container = cosmos_db.get_container_client(os.environ["AZURE_COSMOSDB_USE
 
 # Configure authentication provider
 auth = None
-if os.getenv("USE_ENTRA_PROXY", "false").lower() == "true":
+mcp_auth_provider = os.getenv("MCP_AUTH_PROVIDER", "none").lower()
+if mcp_auth_provider == "entra_proxy":
     # Azure/Entra ID authentication using AzureProvider
     # When running locally, always use localhost for base URL (OAuth redirects need to match)
     oauth_client_store = None
@@ -97,7 +98,7 @@ if os.getenv("USE_ENTRA_PROXY", "false").lower() == "true":
     logger.info(
         "Using Entra OAuth Proxy for server %s and %s storage", entra_base_url, type(oauth_client_store).__name__
     )
-elif os.getenv("USE_KEYCLOAK", "false").lower() == "true":
+elif mcp_auth_provider == "keycloak":
     # Keycloak authentication using RemoteAuthProvider with JWT verification
     KEYCLOAK_REALM_URL = os.environ["KEYCLOAK_REALM_URL"]
     token_verifier = JWTVerifier(
