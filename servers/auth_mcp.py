@@ -22,11 +22,12 @@ from fastmcp.server.dependencies import get_access_token
 from fastmcp.server.middleware import Middleware, MiddlewareContext
 from key_value.aio.stores.memory import MemoryStore
 from opentelemetry.instrumentation.starlette import StarletteInstrumentor
-from opentelemetry_middleware import OpenTelemetryMiddleware
 from pydantic import AnyHttpUrl
 from rich.console import Console
 from rich.logging import RichHandler
 from starlette.responses import JSONResponse
+
+from opentelemetry_middleware import OpenTelemetryMiddleware
 
 RUNNING_IN_PRODUCTION = os.getenv("RUNNING_IN_PRODUCTION", "false").lower() == "true"
 
