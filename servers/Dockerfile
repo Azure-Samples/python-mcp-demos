@@ -39,4 +39,8 @@ EXPOSE 8000
 
 ENV MCP_ENTRY=deployed
 
-CMD ["uvicorn", "${MCP_ENTRY}_mcp:app", "--host", "0.0.0.0", "--port", "8000"]
+# Copy and use entrypoint script for clean env expansion
+COPY --chown=app:app servers/entrypoint.sh /usr/local/bin/entrypoint.sh
+RUN chmod +x /usr/local/bin/entrypoint.sh
+
+ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]

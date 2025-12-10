@@ -45,14 +45,14 @@ async def main():
     load_azd_env()
 
     # Check if FastMCP auth is enabled
-    use_fastmcp_auth = os.getenv("USE_FASTMCP_AUTH", "false").lower() == "true"
-    if not use_fastmcp_auth:
+    USE_ENTRA_PROXY = os.getenv("USE_ENTRA_PROXY", "false").lower() == "true"
+    if not USE_ENTRA_PROXY:
         print("FastMCP auth not enabled, skipping redirect URI update.")
         return
 
-    client_id = os.getenv("FASTMCP_AUTH_AZURE_CLIENT_ID")
+    client_id = os.getenv("ENTRA_PROXY_AZURE_CLIENT_ID")
     if not client_id:
-        print("No FASTMCP_AUTH_AZURE_CLIENT_ID found, skipping redirect URI update.")
+        print("No ENTRA_PROXY_AZURE_CLIENT_ID found, skipping redirect URI update.")
         return
 
     # Get the deployed server URL from MCP_SERVER_URL output
@@ -84,7 +84,7 @@ async def main():
     print(f"  Existing redirect URIs: {len(existing_uris)}")
 
     # Add only the deployed server redirect URI to existing URIs
-    # (local/VS Code URIs are already set by fastmcp_auth_init.py during preprovision)
+    # (local/VS Code URIs are already set by ENTRA_PROXY_init.py during preprovision)
     redirect_uris = set(existing_uris)
     redirect_uris.add(redirect_uri)
 

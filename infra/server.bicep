@@ -16,13 +16,15 @@ param cosmosDbUserContainer string
 param cosmosDbOAuthContainer string
 param applicationInsightsConnectionString string = ''
 param keycloakRealmUrl string = ''
-param mcpServerBaseUrl string = ''
 param keycloakMcpServerAudience string = 'mcp-server'
+param keycloakMcpServerBaseUrl string = ''
 param entraProxyClientId string = ''
 @secure()
 param entraProxyClientSecret string = ''
 param entraProxyBaseUrl string = ''
 param tenantId string = ''
+param useKeycloak bool = false
+param useEntraProxy bool = false
 
 // Base environment variables
 // Select MCP entrypoint based on configured auth (Keycloak or FastMCP Azure auth)
@@ -39,6 +41,14 @@ var baseEnv = [
   {
     name: 'RUNNING_IN_PRODUCTION'
     value: 'true'
+  }
+  {
+    name: 'USE_KEYCLOAK'
+    value: useKeycloak
+  }
+  {
+    name: 'USE_ENTRA_PROXY'
+    value: useEntraProxy
   }
   {
     name: 'AZURE_CLIENT_ID'
@@ -82,27 +92,27 @@ var keycloakEnv = !empty(keycloakRealmUrl) ? [
     value: keycloakRealmUrl
   }
   {
-    name: 'MCP_SERVER_BASE_URL'
-    value: mcpServerBaseUrl
-  }
-  {
     name: 'KEYCLOAK_MCP_SERVER_AUDIENCE'
     value: keycloakMcpServerAudience
+  }
+  {
+    name: 'KEYCLOAK_MCP_SERVER_BASE_URL'
+    value: keycloakMcpServerBaseUrl
   }
 ] : []
 
 // Azure/Entra ID OAuth Proxy environment variables (only added when configured)
 var entraProxyEnv = !empty(entraProxyClientId) ? [
   {
-    name: 'FASTMCP_AUTH_AZURE_CLIENT_ID'
+    name: 'ENTRA_PROXY_AZURE_CLIENT_ID'
     value: entraProxyClientId
   }
   {
-    name: 'FASTMCP_AUTH_AZURE_CLIENT_SECRET'
+    name: 'ENTRA_PROXY_AZURE_CLIENT_SECRET'
     secretRef: 'entra-proxy-client-secret'
   }
   {
-    name: 'FASTMCP_AUTH_AZURE_BASE_URL'
+    name: 'ENTRA_PROXY_MCP_SERVER_BASE_URL'
     value: entraProxyBaseUrl
   }
   {

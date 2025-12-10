@@ -69,31 +69,28 @@ cosmos_db = cosmos_client.get_database_client(os.environ["AZURE_COSMOSDB_DATABAS
 cosmos_container = cosmos_db.get_container_client(os.environ["AZURE_COSMOSDB_USER_CONTAINER"])
 
 # Configure authentication provider
-if RUNNING_IN_PRODUCTION:
-    MCP_SERVER_HOST = os.environ["MCP_SERVER_URL"]
-else:
-    MCP_SERVER_HOST = "http://localhost:8000"
 auth = None
-if os.getenv("USE_FASTMCP_AUTH", "false").lower() == "true":
+if os.getenv("USE_ENTRA_PROXY", "false").lower() == "true":
     # Azure/Entra ID authentication using AzureProvider
     # When running locally, always use localhost for base URL (OAuth redirects need to match)
     oauth_client_store = None
     if RUNNING_IN_PRODUCTION:
         oauth_container = cosmos_db.get_container_client(os.environ["AZURE_COSMOSDB_OAUTH_CONTAINER"])
         oauth_client_store = CosmosDBStore(container=oauth_container, default_collection="oauth-clients")
+        entra_base_url = os.environ["ENTRA_PROXY_MCP_SERVER_BASE_URL"]
     else:
         oauth_client_store = MemoryStore()
-
+        entra_base_url = "http://localhost:8000"
     auth = AzureProvider(
-        client_id=os.environ["FASTMCP_AUTH_AZURE_CLIENT_ID"],
-        client_secret=os.environ["FASTMCP_AUTH_AZURE_CLIENT_SECRET"],
+        client_id=os.environ["ENTRA_PROXY_AZURE_CLIENT_ID"],
+        client_secret=os.environ["ENTRA_PROXY_AZURE_CLIENT_SECRET"],
         tenant_id=os.environ["AZURE_TENANT_ID"],
-        base_url=MCP_SERVER_HOST,
+        base_url=entra_base_url,
         required_scopes=["mcp-access"],
         client_storage=oauth_client_store,
     )
     logger.info(
-        "Using Entra OAuth Proxy for server %s and %s storage", MCP_SERVER_HOST, type(oauth_client_store).__name__
+        "Using Entra OAuth Proxy for server %s and %s storage", entra_base_url, type(oauth_client_store).__name__
     )
 elif os.getenv("USE_KEYCLOAK", "false").lower() == "true":
     # Keycloak authentication using RemoteAuthProvider with JWT verification
@@ -103,12 +100,17 @@ elif os.getenv("USE_KEYCLOAK", "false").lower() == "true":
         issuer=KEYCLOAK_REALM_URL,
         audience=os.getenv("KEYCLOAK_MCP_SERVER_AUDIENCE", "mcp-server"),
     )
+    # Prefer specific base URL env for Keycloak when provided
+    if RUNNING_IN_PRODUCTION:
+        keycloak_base_url = os.environ["KEYCLOAK_MCP_SERVER_BASE_URL"]
+    else:
+        keycloak_base_url = "http://localhost:8000/mcp"
     auth = RemoteAuthProvider(
         token_verifier=token_verifier,
         authorization_servers=[AnyHttpUrl(KEYCLOAK_REALM_URL)],
-        base_url=f"{MCP_SERVER_HOST}/mcp",
+        base_url=keycloak_base_url,
     )
-    logger.info("Using Keycloak auth for server %s and realm %s", MCP_SERVER_HOST, KEYCLOAK_REALM_URL)
+    logger.info("Using Keycloak auth for server %s and realm %s", keycloak_base_url, KEYCLOAK_REALM_URL)
 else:
     logger.error("No authentication configured for MCP server, exiting.")
     raise SystemExit(1)

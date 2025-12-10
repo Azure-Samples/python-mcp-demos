@@ -1,12 +1,11 @@
 #!/bin/bash
-# Pre-provision hook to set up Azure/Entra ID app registration for FastMCP OAuth Proxy
+# Pre-provision hook to set up Azure/Entra ID app registration for FastMCP Entra OAuth Proxy
 
-# Check if USE_FASTMCP_AUTH is enabled
-USE_FASTMCP_AUTH=$(azd env get-value USE_FASTMCP_AUTH 2>/dev/null || echo "false")
-if [ "$USE_FASTMCP_AUTH" != "true" ]; then
-    echo "Skipping auth init (USE_FASTMCP_AUTH is not enabled)"
+USE_ENTRA_PROXY=$(azd env get-value USE_ENTRA_PROXY 2>/dev/null || echo "false")
+if [ "$USE_ENTRA_PROXY" != "true" ]; then
+    echo "Skipping auth init (USE_ENTRA_PROXY is not enabled)"
     exit 0
 fi
 
-echo "Setting up Azure/Entra ID app registration for FastMCP OAuth Proxy..."
-python ./infra/fastmcp_auth_init.py
+echo "Setting up Entra ID app registration for FastMCP Entra OAuth Proxy..."
+python ./infra/auth_init.py

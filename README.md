@@ -381,10 +381,16 @@ This project supports deploying with Microsoft Entra ID (Azure AD) authenticatio
 1. Enable Entra OAuth proxy:
 
    ```bash
-   azd env set USE_FASTMCP_AUTH true
+   azd env set USE_ENTRA_PROXY true
    ```
 
-2. Deploy to Azure:
+2. Set your tenant ID so that the App Registration is created in the correct tenant:
+
+   ```bash
+   azd env set AZURE_TENANT_ID "<your-tenant-id>"
+   ```
+
+3. Deploy to Azure:
 
    ```bash
    azd up
@@ -394,11 +400,11 @@ This project supports deploying with Microsoft Entra ID (Azure AD) authenticatio
    - **Preprovision hook**: Creates a Microsoft Entra App Registration with a client secret, and stores the credentials in azd environment variables
    - **Postprovision hook**: Updates the App Registration with the deployed server URL as an additional redirect URI
 
-3. Verify deployment by checking the outputs:
+4. Verify deployment by checking the outputs:
 
    ```bash
    azd env get-value MCP_SERVER_URL
-   azd env get-value FASTMCP_AUTH_AZURE_CLIENT_ID
+   azd env get-value ENTRA_PROXY_AZURE_CLIENT_ID
    ```
 
 ### Environment variables
@@ -407,11 +413,10 @@ The following environment variables are automatically set by the deployment hook
 
 | Variable | Description |
 |----------|-------------|
-| `FASTMCP_AUTH_AZURE_CLIENT_ID` | The App Registration's client ID |
-| `FASTMCP_AUTH_AZURE_CLIENT_SECRET` | The App Registration's client secret |
-| `FASTMCP_AUTH_AZURE_TENANT_ID` | Your Azure tenant ID |
+| `ENTRA_PROXY_AZURE_CLIENT_ID` | The App Registration's client ID |
+| `ENTRA_PROXY_AZURE_CLIENT_SECRET` | The App Registration's client secret |
 
-These are written to `.env` by the postprovision hook for local development.
+These are then written to `.env` by the postprovision hook for local development.
 
 ### Testing locally
 
@@ -419,25 +424,42 @@ After deployment, you can test locally with OAuth enabled:
 
 ```bash
 # Run the MCP server
-cd servers && uvicorn deployed_mcp:app --host 0.0.0.0 --port 8000
+cd servers && uvicorn auth_mcp:app --host 0.0.0.0 --port 8000
 ```
 
 The server will use the Entra App Registration for OAuth and CosmosDB for client storage.
 
-### Connecting VS Code MCP client
+### Use Entra OAuth MCP server with GitHub Copilot
 
-The App Registration includes redirect URIs for VS Code:
+The Entra App Registration includes these redirect URIs for VS Code:
 
 - `http://localhost:5173/oauth/callback` (VS Code extension localhost)
 - `http://localhost:5174/oauth/callback` (VS Code extension localhost alt port)
 - `https://vscode.dev/redirect` (VS Code web)
 
-Configure your VS Code MCP client to use the deployed server URL with OAuth.
+To use the deployed MCP server with GitHub Copilot Chat:
 
-### Troubleshooting Entra OAuth
+1. To avoid conflicts, stop the MCP servers from `mcp.json` and disable the expense MCP servers in GitHub Copilot Chat tools.
+2. Select "MCP: Add Server" from the VS Code Command Palette
+3. Select "HTTP" as the server type
+4. Enter the URL of the MCP server, either from `MCP_SERVER_URL` environment variable or `http://localhost:8000/mcp` if running locally.
+5. If you get an error about "Client ID not found", open the Command Palette, run **"Authentication: Remove Dynamic Authentication Providers"**, and select the MCP server URL. This clears any cached OAuth tokens and forces a fresh authentication flow. Then restart the server to prompt the OAuth flow again.
+6. You should see a FastMCP authentication screen open in your browser. Select "Allow access":
 
-If you encounter issues with the OAuth flow in VS Code, you can reset the cached authentication state:
+   ![FastMCP authentication screen](readme_appaccess.png)
 
-1. Open the Command Palette (`Cmd+Shift+P` on macOS, `Ctrl+Shift+P` on Windows/Linux)
-2. Run **"Authentication: Remove Dynamic Authentication Providers"**
-3. This clears any cached OAuth tokens and forces a fresh authentication flow
+7. After granting access, the browser will redirect to a VS Code "Sign-in successful!" page and then bring focus back to VS Code.
+
+   ![VS Code sign-in successful page](readme_signedin.png)
+
+8. Enable the MCP server in GitHub Copilot Chat tools and test it with an expense tracking query:
+
+   ```text
+   Log expense for 75 dollars of office supplies on my visa last Friday
+   ```
+
+   ![Example GitHub Copilot Chat Input](readme_authquery.png)
+
+9. Verify the expense was added by checking the Cosmos DB `user-expenses` container in the Azure Portal.
+
+   ![Cosmos DB user-expenses container](readme_userexpenses.png)

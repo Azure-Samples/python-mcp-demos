@@ -69,7 +69,7 @@ param usePrivateAcr bool = false
 param usePrivateLogAnalytics bool = false
 
 @description('Flag to enable Azure/Entra ID OAuth Proxy authentication for the MCP server')
-param useFastMcpAuth bool = false
+param useEntraProxy bool = false
 
 @description('Azure/Entra ID app registration client ID for OAuth Proxy - required when useEntraProxy is true')
 param entraProxyClientId string = ''
@@ -719,11 +719,15 @@ module cosmosDbPrivateEndpoint 'br/public:avm/res/network/private-endpoint:0.11.
 }
 
 // Container app for MCP server
+var containerAppDomain = replace('${take(prefix,15)}-server', '--', '-')
+// DRY base URLs for auth providers
+var keycloakMcpServerBaseUrl = 'https://mcproutes.${containerApps.outputs.defaultDomain}'
+var entraProxyMcpServerBaseUrl = 'https://${containerAppDomain}.${containerApps.outputs.defaultDomain}'
 module server 'server.bicep' = {
   name: 'server'
   scope: resourceGroup
   params: {
-    name: replace('${take(prefix,15)}-server', '--', '-')
+    name: containerAppDomain
     location: location
     tags: tags
     identityName: '${prefix}-id-server'
@@ -740,13 +744,15 @@ module server 'server.bicep' = {
     exists: serverExists
     // Keycloak authentication configuration (only when enabled)
     keycloakRealmUrl: useKeycloak ? '${keycloak!.outputs.uri}/realms/${keycloakRealmName}' : ''
-    mcpServerBaseUrl: useKeycloak ? 'https://mcproutes.${containerApps.outputs.defaultDomain}' : ''
+    keycloakMcpServerBaseUrl: useKeycloak ? keycloakMcpServerBaseUrl : ''
     keycloakMcpServerAudience: keycloakMcpServerAudience
     // Azure/Entra ID OAuth Proxy authentication configuration (only when enabled)
-    entraProxyClientId: useFastMcpAuth ? entraProxyClientId : ''
-    entraProxyClientSecret: useFastMcpAuth ? entraProxyClientSecret : ''
-    entraProxyBaseUrl: useFastMcpAuth ? 'https://${replace('${take(prefix,15)}-server', '--', '-')}.${containerApps.outputs.defaultDomain}' : ''
-    tenantId: useFastMcpAuth ? tenant().tenantId : ''
+    entraProxyClientId: useEntraProxy ? entraProxyClientId : ''
+    entraProxyClientSecret: useEntraProxy ? entraProxyClientSecret : ''
+    entraProxyBaseUrl: useEntraProxy ? entraProxyMcpServerBaseUrl : ''
+    tenantId: useEntraProxy ? tenant().tenantId : ''
+    useKeycloak: useKeycloak
+    useEntraProxy: useEntraProxy
   }
 }
 
@@ -891,8 +897,12 @@ output APPLICATIONINSIGHTS_CONNECTION_STRING string = useMonitoring ? applicatio
 // Use server module's computed entry selection (checks URLs/clientId)
 output MCP_ENTRY string = server.outputs.mcpEntry
 
-// Output the deployed MCP server HOST only (no /mcp). Python app will append /mcp as needed.
-output MCP_SERVER_URL string = useKeycloak ? httpRoutes!.outputs.routeConfigUrl : server.outputs.uri
+// Convenience output so developer can find MCP server URL easily
+output MCP_SERVER_URL string = useKeycloak ? '${httpRoutes!.outputs.routeConfigUrl}/mcp' : '${server.outputs.uri}/mcp'
+
+// Provider-specific base URLs for MCP server (exposed for local env writing)
+output ENTRA_PROXY_MCP_SERVER_BASE_URL string = useEntraProxy ? entraProxyMcpServerBaseUrl : ''
+output KEYCLOAK_MCP_SERVER_BASE_URL string = useKeycloak ? keycloakMcpServerBaseUrl : ''
 
 // Keycloak and MCP Server routing outputs (only populated when useKeycloak is true)
 output KEYCLOAK_REALM_URL string = useKeycloak ? '${httpRoutes!.outputs.routeConfigUrl}/auth/realms/${keycloakRealmName}' : ''
@@ -901,4 +911,4 @@ output KEYCLOAK_DIRECT_URL string = keycloak.outputs.uri
 
 // Auth feature flags for env scripts
 output USE_KEYCLOAK bool = useKeycloak
-output USE_FASTMCP_AUTH bool = useFastMcpAuth
+output USE_ENTRA_PROXY bool = useEntraProxy

@@ -28,6 +28,14 @@
 				"servers/basic_mcp_stdio.py"
 			]
 		},
+		"my-mcp-server-54ab02db": {
+			"url": "http://localhost:8000/mcp",
+			"type": "http"
+		},
+		"my-mcp-server-87f05b06": {
+			"url": "https://pf-mcp-python-a-server.nicedesert-911988d8.westus.azurecontainerapps.io/mcp",
+			"type": "http"
+		}
 	},
 	"inputs": []
 }

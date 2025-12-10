@@ -75,15 +75,16 @@ async def add_client_secret(graph_client: GraphServiceClient, app_object_id: str
     return password_credential.secret_text
 
 
-def fastmcp_app_redirect_uris_update(redirect_uri: str) -> Application:
+def fastmcp_app_redirect_uris_update() -> Application:
     """
     Create an Application object with just redirect URIs for updating existing apps.
 
     This is used when we only need to update redirect URIs without touching permission scopes.
     """
-    # Include redirect URIs for VS Code MCP client (localhost ports and vscode.dev)
     redirect_uris = [
-        redirect_uri,
+        # Include the main redirect URI for local development
+        "http://localhost:8000/auth/callback",
+        # Include redirect URIs for VS Code MCP client (localhost ports and vscode.dev)
         "https://vscode.dev/redirect",
     ]
     # Add common localhost ports used by VS Code for OAuth callbacks
@@ -97,7 +98,7 @@ def fastmcp_app_redirect_uris_update(redirect_uri: str) -> Application:
     )
 
 
-def fastmcp_app_registration(identifier: int, redirect_uri: str, scope_name: str = "mcp-access") -> Application:
+def fastmcp_app_registration(identifier: int) -> Application:
     """
     Create an Application object configured for FastMCP Azure OAuth.
 
@@ -108,7 +109,7 @@ def fastmcp_app_registration(identifier: int, redirect_uri: str, scope_name: str
     """
     # Include redirect URIs for VS Code MCP client (localhost ports and vscode.dev)
     redirect_uris = [
-        redirect_uri,
+        "http://localhost:8000/auth/callback",
         "https://vscode.dev/redirect",
     ]
     # Add common localhost ports used by VS Code for OAuth callbacks
@@ -130,7 +131,7 @@ def fastmcp_app_registration(identifier: int, redirect_uri: str, scope_name: str
                     user_consent_display_name="Access FastMCP Server",
                     user_consent_description="Allow access to the FastMCP server on your behalf",
                     is_enabled=True,
-                    value=scope_name,
+                    value="mcp-access",
                     type="User",
                 )
             ],
@@ -146,14 +147,10 @@ def update_app_with_identifier_uri(client_id: str) -> Application:
     )
 
 
-async def create_or_update_fastmcp_app(
-    graph_client: GraphServiceClient,
-    redirect_uri: str,
-    scope_name: str = "mcp-access",
-) -> None:
+async def create_or_update_fastmcp_app(graph_client: GraphServiceClient) -> None:
     """Create or update a FastMCP app registration."""
-    app_id_env_var = "FASTMCP_AUTH_AZURE_CLIENT_ID"
-    app_secret_env_var = "FASTMCP_AUTH_AZURE_CLIENT_SECRET"
+    app_id_env_var = "ENTRA_PROXY_AZURE_CLIENT_ID"
+    app_secret_env_var = "ENTRA_PROXY_AZURE_CLIENT_SECRET"
 
     app_id = os.getenv(app_id_env_var, "no-id")
     object_id = None
@@ -165,12 +162,10 @@ async def create_or_update_fastmcp_app(
     identifier = random_app_identifier()
 
     if object_id:
-        print("Application already exists, updating redirect URIs...")
-        request_app = fastmcp_app_redirect_uris_update(redirect_uri)
-        await graph_client.applications.by_application_id(object_id).patch(request_app)
+        print("Application already exists, skipping creation.")
     else:
         print("Creating new FastMCP application registration...")
-        request_app = fastmcp_app_registration(identifier, redirect_uri, scope_name)
+        request_app = fastmcp_app_registration(identifier)
         object_id, app_id = await create_application(graph_client, request_app)
         update_azd_env(app_id_env_var, app_id)
         print(f"Created application with Client ID: {app_id}")
@@ -190,27 +185,15 @@ async def create_or_update_fastmcp_app(
 
 async def main():
     # Configuration - customize these as needed
-    base_url = os.getenv("FASTMCP_AUTH_AZURE_BASE_URL", "http://localhost:8000")
-    redirect_path = os.getenv("FASTMCP_AUTH_AZURE_REDIRECT_PATH", "/auth/callback")
-    redirect_uri = f"{base_url}{redirect_path}"
-    scope_name = os.getenv("FASTMCP_SCOPE_NAME", "mcp-access")
-
     auth_tenant = os.environ["AZURE_TENANT_ID"]
 
-    print(f"Setting up FastMCP authentication for tenant: {auth_tenant}")
-    print(f"Redirect URI: {redirect_uri}")
-    print(f"Scope name: {scope_name}")
-    print()
+    print(f"Setting up FastMCP Entra proxy authentication for tenant: {auth_tenant}")
 
     credential = AzureDeveloperCliCredential(tenant_id=auth_tenant)
     scopes = ["https://graph.microsoft.com/.default"]
     graph_client = GraphServiceClient(credentials=credential, scopes=scopes)
 
-    await create_or_update_fastmcp_app(
-        graph_client,
-        redirect_uri=redirect_uri,
-        scope_name=scope_name,
-    )
+    await create_or_update_fastmcp_app(graph_client)
     print("Setup complete!")
 
 
