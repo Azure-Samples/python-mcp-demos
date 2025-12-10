@@ -1,5 +1,4 @@
 import asyncio
-import datetime
 import os
 import random
 import subprocess
@@ -7,7 +6,6 @@ import uuid
 
 from azure.identity.aio import AzureDeveloperCliCredential
 from dotenv_azd import load_azd_env
-from msgraph import GraphServiceClient
 from msgraph.generated.applications.item.add_password.add_password_post_request_body import (
     AddPasswordPostRequestBody,
 )
@@ -17,31 +15,22 @@ from msgraph.generated.models.password_credential import PasswordCredential
 from msgraph.generated.models.permission_scope import PermissionScope
 from msgraph.generated.models.service_principal import ServicePrincipal
 from msgraph.generated.models.web_application import WebApplication
+from msgraph.graph_service_client import GraphServiceClient
 
 
 async def get_application(graph_client: GraphServiceClient, app_id: str) -> str | None:
     """Get an application's object ID by its client/app ID."""
-    try:
-        apps = await graph_client.applications.get()
-        if apps and apps.value:
-            for app in apps.value:
-                if app.app_id == app_id:
-                    return app.id
-    except Exception:
-        pass
+    apps = await graph_client.applications.get()
+    if apps and apps.value:
+        for app in apps.value:
+            if app.app_id == app_id:
+                return app.id
     return None
 
 
 def update_azd_env(name: str, val: str) -> None:
     """Update an Azure Developer CLI environment variable."""
-    subprocess.run(f'azd env set {name} "{val}"', shell=True)
-
-
-def random_app_identifier() -> int:
-    """Generate a random identifier for the app name."""
-    rand = random.Random()
-    rand.seed(datetime.datetime.now().timestamp())
-    return rand.randint(1000, 100000)
+    subprocess.run(["azd", "env", "set", name, val], check=True)
 
 
 async def create_application(graph_client: GraphServiceClient, request_app: Application) -> tuple[str, str]:
@@ -159,7 +148,7 @@ async def create_or_update_fastmcp_app(graph_client: GraphServiceClient) -> None
         print(f"Checking if application {app_id} exists...")
         object_id = await get_application(graph_client, app_id)
 
-    identifier = random_app_identifier()
+    identifier = random.randint(1000, 100000)
 
     if object_id:
         print("Application already exists, skipping creation.")

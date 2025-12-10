@@ -53,7 +53,6 @@
       "useEntraProxy": {
         "value": "${USE_ENTRA_PROXY=false}"
       },
-
       "entraProxyClientId": {
         "value": "${ENTRA_PROXY_AZURE_CLIENT_ID}"
       },

@@ -9,7 +9,7 @@ Based on the proposal in https://github.com/strawgate/py-key-value/issues/44
 
 import logging
 from collections.abc import Mapping, Sequence
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Any, SupportsFloat
 
 from azure.cosmos.aio import ContainerProxy
@@ -196,8 +196,6 @@ class CosmosDBStore:
         if ttl is not None:
             ttl_seconds = float(ttl)
             if ttl_seconds > 0:
-                from datetime import timedelta
-
                 expires_at = now + timedelta(seconds=ttl_seconds)
                 cosmos_ttl = int(ttl_seconds)
 

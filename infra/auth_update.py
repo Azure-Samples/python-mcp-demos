@@ -10,9 +10,9 @@ import os
 
 from azure.identity.aio import AzureDeveloperCliCredential
 from dotenv_azd import load_azd_env
-from msgraph import GraphServiceClient
 from msgraph.generated.models.application import Application
 from msgraph.generated.models.web_application import WebApplication
+from msgraph.graph_service_client import GraphServiceClient
 
 
 async def get_application(graph_client: GraphServiceClient, app_id: str) -> str | None:
@@ -50,18 +50,10 @@ async def main():
         print("FastMCP auth not enabled, skipping redirect URI update.")
         return
 
-    client_id = os.getenv("ENTRA_PROXY_AZURE_CLIENT_ID")
-    if not client_id:
-        print("No ENTRA_PROXY_AZURE_CLIENT_ID found, skipping redirect URI update.")
-        return
-
-    # Get the deployed server URL from MCP_SERVER_URL output
-    server_url = os.getenv("MCP_SERVER_URL", "").rstrip("/mcp").rstrip("/")
-    if not server_url:
-        print("No MCP_SERVER_URL found, skipping redirect URI update.")
-        return
-
+    client_id = os.environ["ENTRA_PROXY_AZURE_CLIENT_ID"]
+    server_url = os.environ["ENTRA_PROXY_MCP_SERVER_BASE_URL"]
     auth_tenant = os.environ["AZURE_TENANT_ID"]
+
     redirect_uri = f"{server_url}/auth/callback"
 
     print("Updating redirect URIs for FastMCP app registration...")

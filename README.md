@@ -433,9 +433,8 @@ The server will use the Entra App Registration for OAuth and CosmosDB for client
 
 The Entra App Registration includes these redirect URIs for VS Code:
 
-- `http://localhost:5173/oauth/callback` (VS Code extension localhost)
-- `http://localhost:5174/oauth/callback` (VS Code extension localhost alt port)
 - `https://vscode.dev/redirect` (VS Code web)
+- `http://127.0.0.1:{33418-33427}` (VS Code desktop local auth helper, 10 ports)
 
 To use the deployed MCP server with GitHub Copilot Chat:
 
