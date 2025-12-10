@@ -10,7 +10,7 @@ from typing import Annotated
 import logfire
 from azure.core.settings import settings
 from azure.cosmos.aio import CosmosClient
-from azure.identity.aio import ChainedTokenCredential, DefaultAzureCredential, ManagedIdentityCredential
+from azure.identity.aio import DefaultAzureCredential, ManagedIdentityCredential
 from azure.monitor.opentelemetry import configure_azure_monitor
 from cosmosdb_store import CosmosDBStore
 from dotenv import load_dotenv
@@ -60,7 +60,12 @@ elif os.getenv("LOGFIRE_PROJECT_NAME"):
     logfire.configure(service_name="expenses-mcp", send_to_logfire=True)
 
 # Configure Cosmos DB client
-azure_credential = ChainedTokenCredential(ManagedIdentityCredential(), DefaultAzureCredential())
+if RUNNING_IN_PRODUCTION:
+    azure_credential = ManagedIdentityCredential(client_id=os.environ["AZURE_CLIENT_ID"])
+    logger.info("Using Managed Identity Credential for Azure authentication")
+else:
+    azure_credential = DefaultAzureCredential()
+    logger.info("Using Default Azure Credential for Azure authentication")
 cosmos_client = CosmosClient(
     url=f"https://{os.environ['AZURE_COSMOSDB_ACCOUNT']}.documents.azure.com:443/",
     credential=azure_credential,
@@ -140,10 +145,6 @@ class UserAuthMiddleware(Middleware):
 
 # Create the MCP server
 mcp = FastMCP("Expenses Tracker", auth=auth, middleware=[OpenTelemetryMiddleware("ExpensesMCP"), UserAuthMiddleware()])
-
-# Configure Starlette middleware for OpenTelemetry
-app = mcp.http_app()
-StarletteInstrumentor.instrument_app(app)
 
 """Expense tracking MCP server with authentication and Cosmos DB storage."""
 
@@ -241,3 +242,9 @@ async def get_user_expenses(ctx: Context):
 async def health_check(_request):
     """Health check endpoint for service availability."""
     return JSONResponse({"status": "healthy", "service": "mcp-server"})
+
+
+# Configure Starlette middleware for OpenTelemetry
+# We must do this *after* defining all the MCP server routes
+app = mcp.http_app()
+StarletteInstrumentor.instrument_app(app)
