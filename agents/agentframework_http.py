@@ -22,15 +22,13 @@ except ImportError:
 logging.basicConfig(level=logging.WARNING, format="%(message)s", datefmt="[%X]", handlers=[RichHandler()])
 logger = logging.getLogger("agentframework_mcp_http")
 
-# Load environment variables
-load_dotenv(override=True)
-
-# Constants
+# Configure constants and client based on environment
 RUNNING_IN_PRODUCTION = os.getenv("RUNNING_IN_PRODUCTION", "false").lower() == "true"
-MCP_SERVER_URL = os.getenv("MCP_SERVER_URL", "http://localhost:8000/mcp/")
 
-# Optional: Keycloak authentication (set KEYCLOAK_REALM_URL to enable)
-KEYCLOAK_REALM_URL = os.getenv("KEYCLOAK_REALM_URL")
+if not RUNNING_IN_PRODUCTION:
+    load_dotenv(override=True)
+
+MCP_SERVER_URL = os.getenv("MCP_SERVER_URL", "http://localhost:8000/mcp/")
 
 # Configure chat client based on API_HOST
 API_HOST = os.getenv("API_HOST", "github")
@@ -58,6 +56,9 @@ else:
     client = OpenAIChatClient(
         api_key=os.environ.get("OPENAI_API_KEY"), model_id=os.environ.get("OPENAI_MODEL", "gpt-4o")
     )
+
+# Optional: Keycloak authentication (set KEYCLOAK_REALM_URL to enable)
+KEYCLOAK_REALM_URL = os.getenv("KEYCLOAK_REALM_URL")
 
 
 # --- Main Agent Logic ---

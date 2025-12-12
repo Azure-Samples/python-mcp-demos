@@ -223,9 +223,9 @@ async def get_user_expenses(ctx: Context):
         if not expenses_data:
             return "No expenses found."
 
-        csv_content = f"Expense data ({len(expenses_data)} entries):\n\n"
+        expense_summary = f"Expense data ({len(expenses_data)} entries):\n\n"
         for expense in expenses_data:
-            csv_content += (
+            expense_summary += (
                 f"Date: {expense.get('date', 'N/A')}, "
                 f"Amount: ${expense.get('amount', 0)}, "
                 f"Category: {expense.get('category', 'N/A')}, "
@@ -233,7 +233,7 @@ async def get_user_expenses(ctx: Context):
                 f"Payment: {expense.get('payment_method', 'N/A')}\n"
             )
 
-        return csv_content
+        return expense_summary
 
     except Exception as e:
         logger.error(f"Error reading expenses: {str(e)}")

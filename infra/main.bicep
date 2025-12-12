@@ -80,6 +80,10 @@ param entraProxyClientId string = ''
 @description('Azure/Entra ID app registration client secret for OAuth Proxy - required when mcpAuthProvider is entra_proxy')
 param entraProxyClientSecret string = ''
 
+@secure()
+@description('Logfire token used by the server container as a secret')
+param logfireToken string = ''
+
 // Derived booleans for backward compatibility in bicep modules
 var useKeycloak = mcpAuthProvider == 'keycloak'
 var useEntraProxy = mcpAuthProvider == 'entra_proxy'
@@ -758,6 +762,7 @@ module server 'server.bicep' = {
     entraProxyBaseUrl: useEntraProxy ? entraProxyMcpServerBaseUrl : ''
     tenantId: useEntraProxy ? tenant().tenantId : ''
     mcpAuthProvider: mcpAuthProvider
+    logfireToken: logfireToken
   }
 }
 

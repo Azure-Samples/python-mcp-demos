@@ -23,6 +23,8 @@ param entraProxyClientId string = ''
 param entraProxyClientSecret string = ''
 param entraProxyBaseUrl string = ''
 param tenantId string = ''
+@secure()
+param logfireToken string = ''
 @allowed([
   'none'
   'keycloak'
@@ -83,6 +85,10 @@ var baseEnv = [
     name: 'MCP_ENTRY'
     value: mcpEntry
   }
+  {
+    name: 'LOGFIRE_TOKEN'
+    secretRef: 'logfire-token'
+  }
 ]
 
 // Keycloak authentication environment variables (only added when configured)
@@ -129,6 +135,14 @@ var entraProxySecrets = !empty(entraProxyClientSecret) ? [
   }
 ] : []
 
+// Secret for Logfire token
+var logfireSecrets = !empty(logfireToken) ? [
+  {
+    name: 'logfire-token'
+    value: logfireToken
+  }
+] : []
+
 
 resource serverIdentity 'Microsoft.ManagedIdentity/userAssignedIdentities@2023-01-31' = {
   name: identityName
@@ -147,7 +161,7 @@ module app 'core/host/container-app-upsert.bicep' = {
     containerRegistryName: containerRegistryName
     ingressEnabled: true
     env: concat(baseEnv, keycloakEnv, entraProxyEnv)
-    secrets: entraProxySecrets
+    secrets: concat(entraProxySecrets, logfireSecrets)
     targetPort: 8000
     probes: [
       {

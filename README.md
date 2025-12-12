@@ -191,7 +191,6 @@ You can use the [.NET Aspire Dashboard](https://learn.microsoft.com/dotnet/aspir
    uv run servers/basic_mcp_http.py
    ```
 
-
 4. View the dashboard at: http://localhost:18888
 
 ---
@@ -287,6 +286,21 @@ You can try the [Azure pricing calculator](https://azure.com/e/3987c81282c84410b
 - **Log Analytics** (Optional): Pay-as-you-go tier. Costs based on data ingested. [Pricing](https://azure.microsoft.com/pricing/details/monitor/)
 
 ⚠️ To avoid unnecessary costs, remember to take down your app if it's no longer in use, either by deleting the resource group in the Portal or running `azd down`.
+
+### Use Deployed MCP server with GitHub Copilot
+
+The URL of the deployed MCP server is available in the azd environment variable `MCP_SERVER_URL`,
+ and is written to the `.env` file created after deployment.
+
+1. To avoid conflicts, stop the MCP servers from `mcp.json` and disable the expense MCP servers in GitHub Copilot Chat tools.
+2. Select "MCP: Add Server" from the VS Code Command Palette
+3. Select "HTTP" as the server type
+4. Enter the URL of the MCP server, based on the `MCP_SERVER_URL` environment variable.
+5. Enable the MCP server in GitHub Copilot Chat tools and test it with an expense tracking query:
+
+   ```text
+   Log expense for 75 dollars of office supplies on my visa last Friday
+   ```
 
 ---
 
