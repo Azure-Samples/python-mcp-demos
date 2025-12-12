@@ -102,9 +102,10 @@ if mcp_auth_provider == "entra_proxy":
 elif mcp_auth_provider == "keycloak":
     # Keycloak authentication using RemoteAuthProvider with JWT verification
     KEYCLOAK_REALM_URL = os.environ["KEYCLOAK_REALM_URL"]
+    KEYCLOAK_TOKEN_ISSUER = os.getenv("KEYCLOAK_TOKEN_ISSUER", KEYCLOAK_REALM_URL)
     token_verifier = JWTVerifier(
         jwks_uri=f"{KEYCLOAK_REALM_URL}/protocol/openid-connect/certs",
-        issuer=KEYCLOAK_REALM_URL,
+        issuer=KEYCLOAK_TOKEN_ISSUER,
         audience=os.getenv("KEYCLOAK_MCP_SERVER_AUDIENCE", "mcp-server"),
     )
     # Prefer specific base URL env for Keycloak when provided

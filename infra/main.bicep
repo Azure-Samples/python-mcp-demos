@@ -754,6 +754,7 @@ module server 'server.bicep' = {
     exists: serverExists
     // Keycloak authentication configuration (only when enabled)
     keycloakRealmUrl: useKeycloak ? '${keycloak!.outputs.uri}/realms/${keycloakRealmName}' : ''
+    keycloakTokenIssuer: useKeycloak ? '${keycloakMcpServerBaseUrl}/realms/${keycloakRealmName}' : ''
     keycloakMcpServerBaseUrl: useKeycloak ? keycloakMcpServerBaseUrl : ''
     keycloakMcpServerAudience: keycloakMcpServerAudience
     // Azure/Entra ID OAuth Proxy authentication configuration (only when enabled)
@@ -918,6 +919,7 @@ output KEYCLOAK_MCP_SERVER_BASE_URL string = useKeycloak ? keycloakMcpServerBase
 output KEYCLOAK_REALM_URL string = useKeycloak ? '${httpRoutes!.outputs.routeConfigUrl}/auth/realms/${keycloakRealmName}' : ''
 output KEYCLOAK_ADMIN_CONSOLE string = useKeycloak ? '${httpRoutes!.outputs.routeConfigUrl}/auth/admin' : ''
 output KEYCLOAK_DIRECT_URL string = keycloak.outputs.uri
+output KEYCLOAK_TOKEN_ISSUER string = useKeycloak ? '${keycloakMcpServerBaseUrl}/realms/${keycloakRealmName}' : ''
 
 // Auth provider for env scripts
 output MCP_AUTH_PROVIDER string = mcpAuthProvider

@@ -56,8 +56,7 @@
       },
       "entraProxyClientSecret": {
         "value": "${ENTRA_PROXY_AZURE_CLIENT_SECRET}"
-      }
-      ,
+      },
       "logfireToken": {
         "value": "${LOGFIRE_TOKEN}"
       }
