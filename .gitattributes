@@ -1,0 +1,30 @@
+# Auto-detect text files and normalize to LF in the repo
+* text=auto
+
+# Shell scripts must use LF (they run in Linux containers/devcontainers)
+*.sh text eol=lf
+entrypoint.sh text eol=lf
+
+# Python files - LF is standard
+*.py text eol=lf
+
+# Dockerfiles run in Linux
+Dockerfile text eol=lf
+
+# Config files that might be used in containers
+*.yaml text eol=lf
+*.yml text eol=lf
+*.json text eol=lf
+*.toml text eol=lf
+*.bicep text eol=lf
+
+# Windows scripts need CRLF
+*.bat text eol=crlf
+*.cmd text eol=crlf
+*.ps1 text eol=crlf
+
+# Binary files
+*.png binary
+*.jpg binary
+*.gif binary
+*.ico binary
