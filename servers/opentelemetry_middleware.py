@@ -1,5 +1,7 @@
+import json
 import logging
 import os
+from typing import Any
 
 from fastmcp.server.middleware import Middleware, MiddlewareContext
 from opentelemetry import metrics, trace
@@ -15,6 +17,7 @@ from opentelemetry.sdk.resources import Resource
 from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.sdk.trace.export import BatchSpanProcessor
 from opentelemetry.trace import Status, StatusCode
+from opentelemetry.util.types import AttributeValue
 
 
 def configure_aspire_dashboard(service_name: str = "expenses-mcp"):
@@ -62,21 +65,46 @@ class OpenTelemetryMiddleware(Middleware):
     def __init__(self, tracer_name: str):
         self.tracer = trace.get_tracer(tracer_name)
 
-    async def on_call_tool(self, context: MiddlewareContext, call_next):
-        """Create a span for each tool call with detailed attributes."""
-        tool_name = context.message.name
+    def _span_name(self, method_name: str, target: str | None) -> str:
+        if target:
+            return f"{method_name} {target}"
+        return method_name
 
-        with self.tracer.start_as_current_span(
-            f"tool.{tool_name}",
-            attributes={
-                "mcp.method": context.method,
-                "mcp.source": context.source,
-                "mcp.tool.name": tool_name,
-                # If arguments are sensitive, consider omitting or sanitizing them
-                # If arguments are long/nested, consider adding a size or depth limit
-                "mcp.tool.arguments": str(context.message.arguments),
-            },
-        ) as span:
+    def _safe_json_str(self, value: Any) -> str | None:
+        """Best-effort JSON serialization.
+
+        `gen_ai.tool.call.arguments` is semconv opt-in and may be sensitive.
+        The OTEL Python SDK span attribute type system doesn't support
+        arbitrary nested objects, so we encode as a JSON string.
+        """
+        if value is None:
+            return None
+        try:
+            return json.dumps(value, ensure_ascii=False, default=str)
+        except Exception:
+            return str(value)
+
+    async def on_call_tool(self, context: MiddlewareContext, call_next):
+        """Create a span for each tool call following MCP semantic conventions."""
+        # MCP semconv: span name is "{mcp.method.name} {target}" where target matches gen_ai.tool.name.
+        method_name = str(getattr(context, "method", "")) or "tools/call"
+        tool_name = str(getattr(context.message, "name", "")) or "unknown"
+        span_name = self._span_name(method_name=method_name, target=tool_name)
+
+        attributes: dict[str, AttributeValue] = {
+            "mcp.method.name": method_name,
+            # PR #2083 aligns tool/prompt naming with GenAI attributes.
+            "gen_ai.tool.name": tool_name,
+            "gen_ai.operation.name": "execute_tool",
+        }
+
+        # Opt-in sensitive attribute (kept for backwards compatibility with prior behavior,
+        # but now recorded under the semconv key).
+        tool_args_json = self._safe_json_str(getattr(context.message, "arguments", None))
+        if tool_args_json is not None:
+            attributes["gen_ai.tool.call.arguments"] = tool_args_json
+
+        with self.tracer.start_as_current_span(span_name, attributes=attributes) as span:
             try:
                 result = await call_next(context)
                 span.set_attribute("mcp.tool.success", True)
@@ -93,11 +121,13 @@ class OpenTelemetryMiddleware(Middleware):
         """Create a span for each resource read."""
         resource_uri = str(getattr(context.message, "uri", "unknown"))
 
+        method_name = str(getattr(context, "method", "")) or "resources/read"
+        span_name = self._span_name(method_name=method_name, target=resource_uri if resource_uri != "unknown" else None)
+
         with self.tracer.start_as_current_span(
-            f"resource.{resource_uri}",
+            span_name,
             attributes={
-                "mcp.method": context.method,
-                "mcp.source": context.source,
+                "mcp.method.name": method_name,
                 "mcp.resource.uri": resource_uri,
             },
         ) as span:
@@ -117,12 +147,14 @@ class OpenTelemetryMiddleware(Middleware):
         """Create a span for each prompt retrieval."""
         prompt_name = getattr(context.message, "name", "unknown")
 
+        method_name = str(getattr(context, "method", "")) or "prompts/get"
+        span_name = self._span_name(method_name=method_name, target=prompt_name if prompt_name != "unknown" else None)
+
         with self.tracer.start_as_current_span(
-            f"prompt.{prompt_name}",
+            span_name,
             attributes={
-                "mcp.method": context.method,
-                "mcp.source": context.source,
-                "mcp.prompt.name": prompt_name,
+                "mcp.method.name": method_name,
+                "gen_ai.prompt.name": str(prompt_name),
             },
         ) as span:
             try:

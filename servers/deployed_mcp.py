@@ -17,10 +17,7 @@ from fastmcp import FastMCP
 from opentelemetry.instrumentation.starlette import StarletteInstrumentor
 from starlette.responses import JSONResponse
 
-try:
-    from opentelemetry_middleware import OpenTelemetryMiddleware
-except ImportError:
-    from servers.opentelemetry_middleware import OpenTelemetryMiddleware
+from opentelemetry_middleware import OpenTelemetryMiddleware
 
 RUNNING_IN_PRODUCTION = os.getenv("RUNNING_IN_PRODUCTION", "false").lower() == "true"
 
@@ -31,13 +28,14 @@ logging.basicConfig(level=logging.WARNING, format="%(asctime)s - %(message)s")
 logger = logging.getLogger("ExpensesMCP")
 logger.setLevel(logging.INFO)
 
-# Configure OpenTelemetry tracing, either via Azure Monitor or Logfire
+# Configure OpenTelemetry tracing based on OPENTELEMETRY_PLATFORM env var
 # We don't support both at the same time due to potential conflicts with tracer providers
 settings.tracing_implementation = "opentelemetry"  # Ensure Azure SDK always uses OpenTelemetry tracing
-if os.getenv("APPLICATIONINSIGHTS_CONNECTION_STRING"):
+opentelemetry_platform = os.getenv("OPENTELEMETRY_PLATFORM", "none").lower()
+if opentelemetry_platform == "appinsights" and os.getenv("APPLICATIONINSIGHTS_CONNECTION_STRING"):
     logger.info("Setting up Azure Monitor instrumentation")
     configure_azure_monitor()
-elif os.getenv("LOGFIRE_PROJECT_NAME"):
+elif opentelemetry_platform == "logfire" and os.getenv("LOGFIRE_TOKEN"):
     logger.info("Setting up Logfire instrumentation")
     logfire.configure(service_name="expenses-mcp", send_to_logfire=True)
 
@@ -115,24 +113,24 @@ async def add_expense(
         return f"Error: Unable to add expense - {str(e)}"
 
 
-@mcp.resource("resource://expenses")
+@mcp.tool
 async def get_expenses_data():
-    """Get raw expense data from Cosmos DB."""
+    """Get raw expense data from Cosmos DB as CSV text."""
     logger.info("Expenses data accessed")
 
     try:
         query = "SELECT * FROM c ORDER BY c.date DESC"
         expenses_data = []
 
-        async for item in cosmos_container.query_items(query=query, enable_cross_partition_query=True):
+        async for item in cosmos_container.query_items(query=query):
             expenses_data.append(item)
 
         if not expenses_data:
             return "No expenses found."
 
-        csv_content = f"Expense data ({len(expenses_data)} entries):\n\n"
+        expense_summary = f"Expense data ({len(expenses_data)} entries):\n\n"
         for expense in expenses_data:
-            csv_content += (
+            expense_summary += (
                 f"Date: {expense.get('date', 'N/A')}, "
                 f"Amount: ${expense.get('amount', 0)}, "
                 f"Category: {expense.get('category', 'N/A')}, "
@@ -140,7 +138,7 @@ async def get_expenses_data():
                 f"Payment: {expense.get('payment_method', 'N/A')}\n"
             )
 
-        return csv_content
+        return expense_summary
 
     except Exception as e:
         logger.error(f"Error reading expenses: {str(e)}")
@@ -194,4 +192,6 @@ async def health_check(_request):
 
 # ASGI application for uvicorn
 app = mcp.http_app()
+
+# Instrument the Starlette app with OpenTelemetry
 StarletteInstrumentor.instrument_app(app)

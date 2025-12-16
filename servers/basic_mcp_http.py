@@ -14,8 +14,9 @@ from opentelemetry_middleware import OpenTelemetryMiddleware, configure_aspire_d
 
 load_dotenv(override=True)
 
-logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(message)s")
+logging.basicConfig(level=logging.WARNING, format="%(asctime)s - %(message)s")
 logger = logging.getLogger("ExpensesMCP")
+logger.setLevel(logging.INFO)
 
 middleware: list[Middleware] = []
 if os.getenv("OTEL_EXPORTER_OTLP_ENDPOINT"):
@@ -141,4 +142,4 @@ def analyze_spending_prompt(
 
 if __name__ == "__main__":
     logger.info("MCP Expenses server starting (HTTP mode on port 8000)")
-    mcp.run(transport="http", host="0.0.0.0", port=8000)
+    mcp.run(transport="streamable-http", host="0.0.0.0", port=8000)

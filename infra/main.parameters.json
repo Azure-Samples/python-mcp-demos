@@ -11,8 +11,8 @@
       "principalId": {
         "value": "${AZURE_PRINCIPAL_ID}"
       },
-      "useMonitoring": {
-        "value": "${USE_MONITORING=true}"
+      "openTelemetryPlatform": {
+        "value": "${OPENTELEMETRY_PLATFORM=appinsights}"
       },
       "useVnet": {
         "value": "${USE_VNET=false}"
@@ -50,12 +50,14 @@
       "keycloakMcpServerAudience": {
         "value": "${KEYCLOAK_MCP_SERVER_AUDIENCE=mcp-server}"
       },
-
       "entraProxyClientId": {
         "value": "${ENTRA_PROXY_AZURE_CLIENT_ID}"
       },
       "entraProxyClientSecret": {
         "value": "${ENTRA_PROXY_AZURE_CLIENT_SECRET}"
+      },
+      "logfireToken": {
+        "value": "${LOGFIRE_TOKEN}"
       }
     }
   }

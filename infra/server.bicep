@@ -15,6 +15,12 @@ param cosmosDbContainer string
 param cosmosDbUserContainer string
 param cosmosDbOAuthContainer string
 param applicationInsightsConnectionString string = ''
+@allowed([
+  'appinsights'
+  'logfire'
+  'none'
+])
+param openTelemetryPlatform string = 'appinsights'
 param keycloakRealmUrl string = ''
 param keycloakTokenIssuer string = ''
 param keycloakMcpServerAudience string = 'mcp-server'
@@ -24,6 +30,8 @@ param entraProxyClientId string = ''
 param entraProxyClientSecret string = ''
 param entraProxyBaseUrl string = ''
 param tenantId string = ''
+@secure()
+param logfireToken string = ''
 @allowed([
   'none'
   'keycloak'
@@ -84,7 +92,19 @@ var baseEnv = [
     name: 'MCP_ENTRY'
     value: mcpEntry
   }
+  {
+    name: 'OPENTELEMETRY_PLATFORM'
+    value: openTelemetryPlatform
+  }
 ]
+
+// Logfire environment variables (only added when configured)
+var logfireEnv = !empty(logfireToken) ? [
+  {
+    name: 'LOGFIRE_TOKEN'
+    secretRef: 'logfire-token'
+  }
+] : []
 
 // Keycloak authentication environment variables (only added when configured)
 var keycloakEnv = !empty(keycloakRealmUrl) ? [
@@ -134,6 +154,14 @@ var entraProxySecrets = !empty(entraProxyClientSecret) ? [
   }
 ] : []
 
+// Secret for Logfire token
+var logfireSecrets = !empty(logfireToken) ? [
+  {
+    name: 'logfire-token'
+    value: logfireToken
+  }
+] : []
+
 
 resource serverIdentity 'Microsoft.ManagedIdentity/userAssignedIdentities@2023-01-31' = {
   name: identityName
@@ -151,8 +179,8 @@ module app 'core/host/container-app-upsert.bicep' = {
     containerAppsEnvironmentName: containerAppsEnvironmentName
     containerRegistryName: containerRegistryName
     ingressEnabled: true
-    env: concat(baseEnv, keycloakEnv, entraProxyEnv)
-    secrets: entraProxySecrets
+    env: concat(baseEnv, keycloakEnv, entraProxyEnv, logfireEnv)
+    secrets: concat(entraProxySecrets, logfireSecrets)
     targetPort: 8000
     probes: [
       {
