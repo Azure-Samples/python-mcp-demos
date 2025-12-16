@@ -121,7 +121,7 @@ The `.vscode/launch.json` provides a debug configuration to attach to an MCP ser
 3. Press `Cmd+Shift+D` to open Run and Debug
 4. Select "Attach to MCP Server (stdio)" configuration
 5. Press `F5` or the play button to start the debugger
-6. Select the expenses-mcp-debug server in GitHub Copilot Chat tools
+6. Select the "expenses-mcp-debug" server in GitHub Copilot Chat tools
 7. Use GitHub Copilot Chat to trigger the MCP tools
 8. Debugger pauses at breakpoints
 

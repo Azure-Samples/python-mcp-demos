@@ -16,6 +16,7 @@ load_dotenv(override=True)
 
 logging.basicConfig(level=logging.WARNING, format="%(asctime)s - %(message)s")
 logger = logging.getLogger("ExpensesMCP")
+logger.setLevel(logging.INFO)
 
 middleware: list[Middleware] = []
 if os.getenv("OTEL_EXPORTER_OTLP_ENDPOINT"):
