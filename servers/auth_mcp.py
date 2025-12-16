@@ -117,7 +117,7 @@ elif mcp_auth_provider == "keycloak":
         required_scopes=[],
         # Audience should match the value in Keycloak's mcp:tools scope
         # Default to the base_url for local dev
-        audience=None
+        audience=None,
     )
     logger.info("Using Keycloak DCR auth for server %s and realm %s", keycloak_base_url, KEYCLOAK_REALM_URL)
 else:
@@ -248,7 +248,6 @@ async def health_check(_request):
     return JSONResponse({"status": "healthy", "service": "mcp-server"})
 
 
-
 # Debug middleware to log token claims before auth
 class TokenDebugMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request, call_next):
@@ -256,9 +255,9 @@ class TokenDebugMiddleware(BaseHTTPMiddleware):
         if auth_header.startswith("Bearer "):
             token = auth_header[7:]
             try:
-                parts = token.split('.')
+                parts = token.split(".")
                 payload = parts[1]
-                payload += '=' * (4 - len(payload) % 4)
+                payload += "=" * (4 - len(payload) % 4)
                 claims = json.loads(base64.urlsafe_b64decode(payload))
                 logger.info("=== TOKEN DEBUG ===")
                 logger.info(f"ALL CLAIMS: {claims}")
@@ -266,6 +265,7 @@ class TokenDebugMiddleware(BaseHTTPMiddleware):
             except Exception as e:
                 logger.error(f"Token decode error: {e}")
         return await call_next(request)
+
 
 # Configure Starlette middleware for OpenTelemetry
 # We must do this *after* defining all the MCP server routes

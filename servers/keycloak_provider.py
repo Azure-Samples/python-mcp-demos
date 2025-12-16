@@ -27,13 +27,14 @@ from starlette.routing import Route
 def decode_jwt_debug(token):
     """Decode JWT payload for debugging"""
     try:
-        parts = token.split('.')
+        parts = token.split(".")
         payload = parts[1]
-        payload += '=' * (4 - len(payload) % 4)
+        payload += "=" * (4 - len(payload) % 4)
         decoded = base64.urlsafe_b64decode(payload)
         return json.loads(decoded)
     except Exception as e:
         return {"error": str(e)}
+
 
 logger = get_logger(__name__)
 
@@ -157,21 +158,18 @@ class KeycloakAuthProvider(RemoteAuthProvider):
             """Forward Keycloak's OAuth metadata with registration endpoint pointing to our minimal DCR proxy."""
             try:
                 async with httpx.AsyncClient() as client:
-                    response = await client.get(
-                        f"{self.realm_url}/.well-known/oauth-authorization-server"
-                    )
+                    response = await client.get(f"{self.realm_url}/.well-known/oauth-authorization-server")
                     response.raise_for_status()
                     metadata = response.json()
 
                     # Override registration_endpoint to use our minimal DCR proxy
                     base_url = str(self.base_url).rstrip("/")
                     metadata["registration_endpoint"] = f"{base_url}/register"
-                    
+
                     # Override issuer to match our base URL (required for OAuth discovery)
                     # VS Code validates that the issuer matches the authorization server URL
                     # AnyHttpUrl adds trailing slash to root URLs, so we need to match that
-                  
-                    
+
                     # Also fix mtls_endpoint_aliases if present (VS Code may check this)
                     if "mtls_endpoint_aliases" in metadata:
                         metadata["mtls_endpoint_aliases"]["registration_endpoint"] = f"{base_url}/register"
@@ -203,19 +201,22 @@ class KeycloakAuthProvider(RemoteAuthProvider):
             token_endpoint_auth_method field in the response. For MCP compatibility:
             - "client_secret_basic" -> "none" (public client, no secret needed)
             - Preserves "none" if requested
-            
+
             All other fields are passed through unchanged.
             """
             try:
                 body = await request.body()
-                
+
                 # Log incoming request for debugging
                 try:
                     import json
+
                     request_data = json.loads(body)
-                    logger.info(f"DCR request received: client_name={request_data.get('client_name')}, "
-                               f"redirect_uris={request_data.get('redirect_uris')}, "
-                               f"token_endpoint_auth_method={request_data.get('token_endpoint_auth_method')}")
+                    logger.info(
+                        f"DCR request received: client_name={request_data.get('client_name')}, "
+                        f"redirect_uris={request_data.get('redirect_uris')}, "
+                        f"token_endpoint_auth_method={request_data.get('token_endpoint_auth_method')}"
+                    )
                 except Exception:
                     logger.info(f"DCR request received (raw): {body[:500]}")
 
@@ -224,16 +225,13 @@ class KeycloakAuthProvider(RemoteAuthProvider):
                     forward_headers = {
                         key: value
                         for key, value in request.headers.items()
-                        if key.lower()
-                        not in {"host", "content-length", "transfer-encoding", "content-type"}
+                        if key.lower() not in {"host", "content-length", "transfer-encoding", "content-type"}
                     }
                     forward_headers["Content-Type"] = "application/json"
 
                     # Keycloak's standard DCR endpoint pattern
-                    registration_endpoint = (
-                        f"{self.realm_url}/clients-registrations/openid-connect"
-                    )
-                    
+                    registration_endpoint = f"{self.realm_url}/clients-registrations/openid-connect"
+
                     logger.info(f"Forwarding DCR to Keycloak: {registration_endpoint}")
 
                     response = await client.post(
@@ -241,7 +239,7 @@ class KeycloakAuthProvider(RemoteAuthProvider):
                         content=body,
                         headers=forward_headers,
                     )
-                    
+
                     logger.info(f"Keycloak DCR response status: {response.status_code}")
 
                     if response.status_code != 201:
@@ -260,17 +258,13 @@ class KeycloakAuthProvider(RemoteAuthProvider):
                     client_info = response.json()
                     original_auth_method = client_info.get("token_endpoint_auth_method")
 
-                    logger.info(
-                        f"Keycloak returned token_endpoint_auth_method: {original_auth_method}"
-                    )
+                    logger.info(f"Keycloak returned token_endpoint_auth_method: {original_auth_method}")
 
                     # MCP requires public clients (token_endpoint_auth_method: none)
                     # Keycloak ignores the client's request and returns client_secret_basic
                     # We fix this by always returning "none" for MCP clients
                     if original_auth_method in ("client_secret_basic", "client_secret_post"):
-                        logger.info(
-                            f"Fixing token_endpoint_auth_method: {original_auth_method} -> none"
-                        )
+                        logger.info(f"Fixing token_endpoint_auth_method: {original_auth_method} -> none")
                         client_info["token_endpoint_auth_method"] = "none"
 
                     logger.info(
@@ -304,18 +298,18 @@ class KeycloakAuthProvider(RemoteAuthProvider):
             auth_header = request.headers.get("Authorization", "")
             if not auth_header.startswith("Bearer "):
                 return JSONResponse({"error": "No bearer token"}, status_code=400)
-            
+
             token = auth_header[7:]
             claims = decode_jwt_debug(token)
-            
-            return JSONResponse({
-                "token_claims": claims,
-                "expected_issuer": self.realm_url,
-                "expected_audience": str(self.base_url),
-            })
 
-        routes.append(
-        Route("/debug-token", endpoint=debug_token, methods=["GET", "POST"])
-    )
+            return JSONResponse(
+                {
+                    "token_claims": claims,
+                    "expected_issuer": self.realm_url,
+                    "expected_audience": str(self.base_url),
+                }
+            )
+
+        routes.append(Route("/debug-token", endpoint=debug_token, methods=["GET", "POST"]))
 
         return routes
