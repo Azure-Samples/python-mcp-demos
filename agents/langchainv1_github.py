@@ -90,7 +90,7 @@ async def main():
         prompt="You help users research GitHub repositories. Search and analyze information.",
     )
 
-    query = "Find popular Python MCP server repositories"
+    query = "Find 5 popular Python MCP server repositories and describe in a bulleted list."
     rprint(f"[bold]Query:[/bold] {query}\n")
 
     try:

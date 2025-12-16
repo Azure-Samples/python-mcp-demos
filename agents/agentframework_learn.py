@@ -58,11 +58,7 @@ async def http_mcp_example() -> None:
     using the Microsoft Learn MCP server.
     """
     async with (
-        MCPStreamableHTTPTool(
-            name="Microsoft Learn MCP",
-            url=LEARN_MCP_URL,
-            headers={"Authorization": "Bearer your-token"},
-        ) as mcp_server,
+        MCPStreamableHTTPTool(name="Microsoft Learn MCP", url=LEARN_MCP_URL) as mcp_server,
         ChatAgent(
             chat_client=client,
             name="DocsAgent",

@@ -37,8 +37,16 @@ param keycloakExists bool = false
 // This does not need a default value, as azd will prompt the user to select a location
 param openAiResourceLocation string
 
-@description('Flag to enable or disable monitoring resources')
-param useMonitoring bool = true
+@description('OpenTelemetry platform for monitoring: appinsights, logfire, or none')
+@allowed([
+  'appinsights'
+  'logfire'
+  'none'
+])
+param openTelemetryPlatform string = 'appinsights'
+
+// Derived boolean for App Insights resource creation
+var useAppInsights = openTelemetryPlatform == 'appinsights'
 
 @description('Flag to enable or disable the virtual network feature')
 param useVnet bool = false
@@ -112,6 +120,7 @@ module openAi 'br/public:avm/res/cognitive-services/account:0.7.2' = {
   name: 'openai'
   scope: resourceGroup
   params: {
+    restore: true
     name: '${resourceToken}-cog'
     location: openAiResourceLocation
     tags: tags
@@ -123,7 +132,7 @@ module openAi 'br/public:avm/res/cognitive-services/account:0.7.2' = {
       bypass: 'AzureServices'
     }
     sku: 'S0'
-    diagnosticSettings: useMonitoring
+    diagnosticSettings: useAppInsights
       ? [
           {
             name: 'customSetting'
@@ -200,7 +209,7 @@ module cosmosDb 'br/public:avm/res/document-db/database-account:0.6.1' = {
   }
 }
 
-module logAnalyticsWorkspace 'br/public:avm/res/operational-insights/workspace:0.7.0' = if (useMonitoring) {
+module logAnalyticsWorkspace 'br/public:avm/res/operational-insights/workspace:0.7.0' = if (useAppInsights) {
   name: 'loganalytics'
   scope: resourceGroup
   params: {
@@ -216,7 +225,7 @@ module logAnalyticsWorkspace 'br/public:avm/res/operational-insights/workspace:0
 }
 
 // Application Insights for telemetry
-module applicationInsights 'br/public:avm/res/insights/component:0.4.2' = if (useMonitoring) {
+module applicationInsights 'br/public:avm/res/insights/component:0.4.2' = if (useAppInsights) {
   name: 'applicationinsights'
   scope: resourceGroup
   params: {
@@ -415,7 +424,7 @@ module openAiPrivateDnsZone 'br/public:avm/res/network/private-dns-zone:0.7.1' =
 }
 
 // Log Analytics Private DNS Zone
-module logAnalyticsPrivateDnsZone 'br/public:avm/res/network/private-dns-zone:0.7.1' = if (useVnet && useMonitoring) {
+module logAnalyticsPrivateDnsZone 'br/public:avm/res/network/private-dns-zone:0.7.1' = if (useVnet && useAppInsights) {
   name: 'log-analytics-dns-zone'
   scope: resourceGroup
   params: {
@@ -431,7 +440,7 @@ module logAnalyticsPrivateDnsZone 'br/public:avm/res/network/private-dns-zone:0.
 }
 
 // Additional Log Analytics Private DNS Zone for query endpoint
-module logAnalyticsQueryPrivateDnsZone 'br/public:avm/res/network/private-dns-zone:0.7.1' = if (useVnet && useMonitoring) {
+module logAnalyticsQueryPrivateDnsZone 'br/public:avm/res/network/private-dns-zone:0.7.1' = if (useVnet && useAppInsights) {
   name: 'log-analytics-query-dns-zone'
   scope: resourceGroup
   params: {
@@ -447,7 +456,7 @@ module logAnalyticsQueryPrivateDnsZone 'br/public:avm/res/network/private-dns-zo
 }
 
 // Additional Log Analytics Private DNS Zone for agent service
-module logAnalyticsAgentPrivateDnsZone 'br/public:avm/res/network/private-dns-zone:0.7.1' = if (useVnet && useMonitoring) {
+module logAnalyticsAgentPrivateDnsZone 'br/public:avm/res/network/private-dns-zone:0.7.1' = if (useVnet && useAppInsights) {
   name: 'log-analytics-agent-dns-zone'
   scope: resourceGroup
   params: {
@@ -463,7 +472,7 @@ module logAnalyticsAgentPrivateDnsZone 'br/public:avm/res/network/private-dns-zo
 }
 
 // Azure Monitor Private DNS Zone
-module monitorPrivateDnsZone 'br/public:avm/res/network/private-dns-zone:0.7.1' = if (useVnet && useMonitoring) {
+module monitorPrivateDnsZone 'br/public:avm/res/network/private-dns-zone:0.7.1' = if (useVnet && useAppInsights) {
   name: 'monitor-dns-zone'
   scope: resourceGroup
   params: {
@@ -479,7 +488,7 @@ module monitorPrivateDnsZone 'br/public:avm/res/network/private-dns-zone:0.7.1' 
 }
 
 // Storage Blob Private DNS Zone for Log Analytics solution packs
-module blobPrivateDnsZone 'br/public:avm/res/network/private-dns-zone:0.7.1' = if (useVnet && useMonitoring) {
+module blobPrivateDnsZone 'br/public:avm/res/network/private-dns-zone:0.7.1' = if (useVnet && useAppInsights) {
   name: 'blob-dns-zone'
   scope: resourceGroup
   params: {
@@ -603,7 +612,7 @@ module privateEndpoint 'br/public:avm/res/network/private-endpoint:0.11.0' = if 
 }
 
 // Azure Monitor Private Link Scope
-module monitorPrivateLinkScope 'br/public:avm/res/insights/private-link-scope:0.7.1' = if (useVnet && useMonitoring) {
+module monitorPrivateLinkScope 'br/public:avm/res/insights/private-link-scope:0.7.1' = if (useVnet && useAppInsights) {
   name: 'monitor-private-link-scope'
   scope: resourceGroup
   params: {
@@ -658,7 +667,7 @@ module containerApps 'core/host/container-apps.bicep' = {
     tags: tags
     containerAppsEnvironmentName: '${prefix}-containerapps-env'
     containerRegistryName: '${take(replace(prefix, '-', ''), 42)}registry'
-    logAnalyticsWorkspaceName: useMonitoring ? logAnalyticsWorkspace!.outputs.name : ''
+    logAnalyticsWorkspaceName: useAppInsights ? logAnalyticsWorkspace!.outputs.name : ''
     // Reference the virtual network only if useVnet is true
     subnetResourceId: useVnet ? virtualNetwork!.outputs.subnetResourceIds[0] : ''
     vnetName: useVnet ? virtualNetwork!.outputs.name : ''
@@ -750,7 +759,8 @@ module server 'server.bicep' = {
     cosmosDbContainer: cosmosDbContainerName
     cosmosDbUserContainer: cosmosDbUserContainerName
     cosmosDbOAuthContainer: cosmosDbOAuthContainerName
-    applicationInsightsConnectionString: useMonitoring ? applicationInsights!.outputs.connectionString : ''
+    applicationInsightsConnectionString: useAppInsights ? applicationInsights!.outputs.connectionString : ''
+    openTelemetryPlatform: openTelemetryPlatform
     exists: serverExists
     // Keycloak authentication configuration (only when enabled)
     keycloakRealmUrl: useKeycloak ? '${keycloak!.outputs.uri}/realms/${keycloakRealmName}' : ''
@@ -902,7 +912,7 @@ output AZURE_COSMOSDB_USER_CONTAINER string = cosmosDbUserContainerName
 output AZURE_COSMOSDB_OAUTH_CONTAINER string = cosmosDbOAuthContainerName
 
 // We typically do not output sensitive values, but App Insights connection strings are not considered highly sensitive
-output APPLICATIONINSIGHTS_CONNECTION_STRING string = useMonitoring ? applicationInsights!.outputs.connectionString : ''
+output APPLICATIONINSIGHTS_CONNECTION_STRING string = useAppInsights ? applicationInsights!.outputs.connectionString : ''
 
 // Entry selection for MCP server (auth-enabled when Keycloak or FastMCP auth is used)
 // Use server module's computed entry selection (checks URLs/clientId)
@@ -923,3 +933,6 @@ output KEYCLOAK_TOKEN_ISSUER string = useKeycloak ? '${keycloakMcpServerBaseUrl}
 
 // Auth provider for env scripts
 output MCP_AUTH_PROVIDER string = mcpAuthProvider
+
+// OpenTelemetry platform for env scripts
+output OPENTELEMETRY_PLATFORM string = openTelemetryPlatform

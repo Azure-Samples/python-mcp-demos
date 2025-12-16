@@ -28,13 +28,14 @@ logging.basicConfig(level=logging.WARNING, format="%(asctime)s - %(message)s")
 logger = logging.getLogger("ExpensesMCP")
 logger.setLevel(logging.INFO)
 
-# Configure OpenTelemetry tracing, either via Azure Monitor or Logfire
+# Configure OpenTelemetry tracing based on OPENTELEMETRY_PLATFORM env var
 # We don't support both at the same time due to potential conflicts with tracer providers
 settings.tracing_implementation = "opentelemetry"  # Ensure Azure SDK always uses OpenTelemetry tracing
-if os.getenv("APPLICATIONINSIGHTS_CONNECTION_STRING"):
+opentelemetry_platform = os.getenv("OPENTELEMETRY_PLATFORM", "none").lower()
+if opentelemetry_platform == "appinsights" and os.getenv("APPLICATIONINSIGHTS_CONNECTION_STRING"):
     logger.info("Setting up Azure Monitor instrumentation")
     configure_azure_monitor()
-elif os.getenv("LOGFIRE_PROJECT_NAME"):
+elif opentelemetry_platform == "logfire" and os.getenv("LOGFIRE_TOKEN"):
     logger.info("Setting up Logfire instrumentation")
     logfire.configure(service_name="expenses-mcp", send_to_logfire=True)
 

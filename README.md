@@ -287,7 +287,7 @@ You can try the [Azure pricing calculator](https://azure.com/e/3987c81282c84410b
 
 ⚠️ To avoid unnecessary costs, remember to take down your app if it's no longer in use, either by deleting the resource group in the Portal or running `azd down`.
 
-### Use Deployed MCP server with GitHub Copilot
+### Use deployed MCP server with GitHub Copilot
 
 The URL of the deployed MCP server is available in the azd environment variable `MCP_SERVER_URL`,
  and is written to the `.env` file created after deployment.
@@ -301,6 +301,44 @@ The URL of the deployed MCP server is available in the azd environment variable 
    ```text
    Log expense for 75 dollars of office supplies on my visa last Friday
    ```
+
+### Running the server locally
+
+After deployment sets up the required Azure resources (Cosmos DB, Application Insights), you can also run the MCP server locally against those resources:
+
+```bash
+# Run the MCP server
+cd servers && uvicorn deployed_mcp:app --host 0.0.0.0 --port 8000
+```
+
+### Viewing traces in Azure Application Insights
+
+By default, OpenTelemetry tracing is enabled for the deployed MCP server, sending traces to Azure Application Insights.
+
+1. Open the Azure Portal and navigate to the Application Insights resource created during deployment (named `<project-name>-appinsights`).
+2. In Application Insights, go to "Transaction Search" to view traces from the MCP server
+3. You can filter and analyze traces to monitor performance and diagnose issues.
+
+### Viewing traces in Logfire
+
+You can also view OpenTelemetry traces in [Logfire](https://logfire.io/) by configuring the MCP server to send traces there.
+
+1. Create a Logfire account and get your write token from the Logfire dashboard.
+
+2. Set the azd environment variables to enable Logfire:
+
+   ```bash
+   azd env set OPENTELEMETRY_PLATFORM logfire
+   azd env set LOGFIRE_TOKEN <your-logfire-write-token>
+   ```
+
+3. Provision and deploy:
+
+   ```bash
+   azd up
+   ```
+
+4. Open the Logfire dashboard to view traces from the MCP server.
 
 ---
 
@@ -475,7 +513,7 @@ The following environment variables are automatically set by the deployment hook
 
 These are then written to `.env` by the postprovision hook for local development.
 
-### Testing locally
+### Testing the Entra OAuth server locally
 
 After deployment, you can test locally with OAuth enabled:
 

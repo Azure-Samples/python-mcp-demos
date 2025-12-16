@@ -52,11 +52,12 @@ logger.setLevel(logging.INFO)
 # Configure Azure SDK OpenTelemetry to use OTEL
 settings.tracing_implementation = "opentelemetry"
 
-# Configure OpenTelemetry exporters (App Insights or Logfire)
-if os.getenv("APPLICATIONINSIGHTS_CONNECTION_STRING"):
+# Configure OpenTelemetry exporters based on OPENTELEMETRY_PLATFORM env var
+opentelemetry_platform = os.getenv("OPENTELEMETRY_PLATFORM", "none").lower()
+if opentelemetry_platform == "appinsights" and os.getenv("APPLICATIONINSIGHTS_CONNECTION_STRING"):
     logger.info("Setting up Azure Monitor instrumentation")
     configure_azure_monitor()
-elif os.getenv("LOGFIRE_PROJECT_NAME"):
+elif opentelemetry_platform == "logfire" and os.getenv("LOGFIRE_TOKEN"):
     logger.info("Setting up Logfire instrumentation")
     logfire.configure(service_name="expenses-mcp", send_to_logfire=True)
 
