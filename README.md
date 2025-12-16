@@ -289,8 +289,7 @@ You can try the [Azure pricing calculator](https://azure.com/e/3987c81282c84410b
 
 ### Use deployed MCP server with GitHub Copilot
 
-The URL of the deployed MCP server is available in the azd environment variable `MCP_SERVER_URL`,
- and is written to the `.env` file created after deployment.
+The URL of the deployed MCP server is available in the azd environment variable `MCP_SERVER_URL`, and is written to the `.env` file created after deployment.
 
 1. To avoid conflicts, stop the MCP servers from `mcp.json` and disable the expense MCP servers in GitHub Copilot Chat tools.
 2. Select "MCP: Add Server" from the VS Code Command Palette
