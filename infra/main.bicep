@@ -120,7 +120,6 @@ module openAi 'br/public:avm/res/cognitive-services/account:0.7.2' = {
   name: 'openai'
   scope: resourceGroup
   params: {
-    restore: true
     name: '${resourceToken}-cog'
     location: openAiResourceLocation
     tags: tags
