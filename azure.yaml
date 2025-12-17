@@ -18,6 +18,7 @@ services:
     language: docker
     host: containerapp
     docker:
+      remoteBuild: true
       path: ./keycloak/Dockerfile
       context: .
   agent:
