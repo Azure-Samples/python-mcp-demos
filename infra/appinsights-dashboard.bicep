@@ -400,7 +400,7 @@ resource dashboard 'Microsoft.Portal/dashboards@2020-09-01-preview' = {
                 }
                 {
                   name: 'Query'
-                  value: 'dependencies\n| where tostring(customDimensions["mcp.method.name"]) == "tools/call"\n| extend tool = coalesce(tostring(customDimensions["gen_ai.tool.name"]), target, name)\n| summarize count() by tool\n| order by count_ desc\n| render timechart'
+                  value: 'dependencies\n| where tostring(customDimensions["mcp.method.name"]) == "tools/call"\n| extend tool = coalesce(tostring(customDimensions["gen_ai.tool.name"]), target, name)\n| summarize count() by tool\n| order by count_ desc\n| render barchart'
                   isOptional: true
                 }
                 {
