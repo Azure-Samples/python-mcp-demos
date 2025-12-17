@@ -20,9 +20,26 @@ resource dashboard 'Microsoft.Portal/dashboards@2020-09-01-preview' = {
       {
         order: 0
         parts: [
+          // Header: Tool call analytics (Markdown)
+          {
+            position: { x: 0, y: 4, colSpan: 12, rowSpan: 1 }
+            metadata: any({
+              type: 'Extension/HubsExtension/PartType/MarkdownPart'
+              inputs: []
+              settings: {
+                content: {
+                  settings: {
+                    content: '# Tool call analytics'
+                    title: ''
+                    subtitle: ''
+                  }
+                }
+              }
+            })
+          }
           // 1) Tools/Call - Counts over time (timechart)
           {
-            position: { x: 0, y: 4, colSpan: 6, rowSpan: 4 }
+            position: { x: 0, y: 5, colSpan: 6, rowSpan: 4 }
             metadata: {
               inputs: [
                 {
@@ -126,7 +143,7 @@ resource dashboard 'Microsoft.Portal/dashboards@2020-09-01-preview' = {
           }
           // 2) Success vs Error over time (stacked timechart)
           {
-            position: { x: 6, y: 4, colSpan: 6, rowSpan: 4 }
+            position: { x: 6, y: 5, colSpan: 6, rowSpan: 4 }
             metadata: {
               inputs: [
                 {
@@ -236,7 +253,7 @@ resource dashboard 'Microsoft.Portal/dashboards@2020-09-01-preview' = {
           }
           // 3) Success rate (%) over time (single line)
           {
-            position: { x: 0, y: 8, colSpan: 6, rowSpan: 4 }
+            position: { x: 0, y: 9, colSpan: 6, rowSpan: 4 }
             metadata: {
               inputs: [
                 {
@@ -340,7 +357,7 @@ resource dashboard 'Microsoft.Portal/dashboards@2020-09-01-preview' = {
           }
           // 4) Calls by tool (bar/column chart)
           {
-            position: { x: 6, y: 8, colSpan: 6, rowSpan: 4 }
+            position: { x: 6, y: 9, colSpan: 6, rowSpan: 4 }
             metadata: {
               inputs: [
                 {
@@ -444,7 +461,7 @@ resource dashboard 'Microsoft.Portal/dashboards@2020-09-01-preview' = {
           }
           // 5) Latency percentiles (p50/p95/p99) over time
           {
-            position: { x: 0, y: 12, colSpan: 12, rowSpan: 4 }
+            position: { x: 0, y: 13, colSpan: 12, rowSpan: 4 }
             metadata: {
               inputs: [
                 {
