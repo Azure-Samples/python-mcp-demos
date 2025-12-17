@@ -312,10 +312,16 @@ cd servers && uvicorn deployed_mcp:app --host 0.0.0.0 --port 8000
 
 ### Viewing traces in Azure Application Insights
 
-By default, OpenTelemetry tracing is enabled for the deployed MCP server, sending traces to Azure Application Insights.
+By default, OpenTelemetry tracing is enabled for the deployed MCP server, sending traces to Azure Application Insights. To bring up a dashboard of metrics and traces, run:
+
+```shell
+azd monitor
+```
+
+Or you can use Application Insights directly:
 
 1. Open the Azure Portal and navigate to the Application Insights resource created during deployment (named `<project-name>-appinsights`).
-2. In Application Insights, go to "Transaction Search" to view traces from the MCP server
+2. In Application Insights, go to "Transaction Search" to view traces from the MCP server.
 3. You can filter and analyze traces to monitor performance and diagnose issues.
 
 ### Viewing traces in Logfire
