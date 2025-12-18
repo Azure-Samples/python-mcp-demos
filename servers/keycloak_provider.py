@@ -9,15 +9,12 @@ Based on proposed FastMCP PR: https://github.com/jlowin/fastmcp/pull/1937
 
 from __future__ import annotations
 
-import json
-from urllib.parse import urlencode
-
 import httpx
 from fastmcp.server.auth import RemoteAuthProvider
 from fastmcp.server.auth.providers.jwt import JWTVerifier
 from fastmcp.utilities.logging import get_logger
 from pydantic import AnyHttpUrl
-from starlette.responses import JSONResponse, RedirectResponse
+from starlette.responses import JSONResponse
 from starlette.routing import Route
 
 logger = get_logger(__name__)
@@ -134,7 +131,6 @@ class KeycloakAuthProvider(RemoteAuthProvider):
                     # Override registration_endpoint to use our minimal DCR proxy
                     base_url = str(self.base_url).rstrip("/")
                     metadata["registration_endpoint"] = f"{base_url}/register"
-                    metadata["authorization_endpoint"] = f"{base_url}/authorize"
 
                     return JSONResponse(metadata)
             except Exception as e:
@@ -157,36 +153,17 @@ class KeycloakAuthProvider(RemoteAuthProvider):
         )
 
         async def register_client_fix_auth_method(request):
-            """Minimal DCR proxy that fixes token_endpoint_auth_method and scope in Keycloak's client registration response.
+            """Minimal DCR proxy that fixes token_endpoint_auth_method in Keycloak's 
+            client registration response.
 
             Forwards registration requests to Keycloak's DCR endpoint and modifies:
             1. token_endpoint_auth_method: "client_secret_basic" -> "client_secret_post" for MCP compatibility
-            2. scope: Ensures default scopes (openid, profile, email, mcp:tools) are included so audience mapper runs
 
             All other fields are passed through unchanged.
             """
             try:
                 body = await request.body()
                 logger.info(f"DCR request body (original): {body.decode('utf-8')}")
-
-                # Inject default scopes to ensure audience mapper runs
-                # This is required because VS Code's MCP client doesn't request scopes during registration
-                try:
-                    client_metadata = json.loads(body)
-                    # Ensure we have at least openid scope which contains the audience mapper
-                    current_scopes = client_metadata.get("scope", "").split()
-                    if "openid" not in current_scopes:
-                        current_scopes.append("openid")
-                    # Add other useful scopes
-                    for scope in ["mcp:access"]:
-                        if scope not in current_scopes:
-                            current_scopes.append(scope)
-
-                    client_metadata["scope"] = " ".join(current_scopes)
-                    body = json.dumps(client_metadata).encode("utf-8")
-                    logger.info(f"DCR request body (modified): {body.decode('utf-8')}")
-                except Exception as e:
-                    logger.warning(f"Failed to inject scopes into DCR request: {e}")
 
                 # Forward to Keycloak's DCR endpoint
                 async with httpx.AsyncClient(timeout=10.0) as client:
@@ -224,9 +201,8 @@ class KeycloakAuthProvider(RemoteAuthProvider):
                         logger.debug("Fixing token_endpoint_auth_method: client_secret_basic -> client_secret_post")
                         client_info["token_endpoint_auth_method"] = "client_secret_post"
 
-                    logger.debug(
-                        f"Returning token_endpoint_auth_method to client: {client_info.get('token_endpoint_auth_method')}"
-                    )
+                    auth_method = client_info.get("token_endpoint_auth_method")
+                    logger.debug(f"Returning token_endpoint_auth_method to client: {auth_method}")
                     return JSONResponse(client_info, status_code=201)
             except Exception as e:
                 logger.error(f"DCR proxy error: {e}")
@@ -244,41 +220,6 @@ class KeycloakAuthProvider(RemoteAuthProvider):
                 "/register",
                 endpoint=register_client_fix_auth_method,
                 methods=["POST"],
-            )
-        )
-
-        async def authorize_proxy(request):
-            """Proxy for authorization endpoint to inject default scopes."""
-            # Convert query params to mutable dict
-            params = dict(request.query_params)
-
-            # Inject scopes
-            current_scopes = params.get("scope", "").split()
-            # Ensure openid is present (required for OIDC)
-            if "openid" not in current_scopes:
-                current_scopes.append("openid")
-            # Add other useful scopes
-            for scope in ["mcp:access"]:
-                if scope not in current_scopes:
-                    current_scopes.append(scope)
-
-            params["scope"] = " ".join(current_scopes)
-
-            # Construct target URL (Keycloak's real auth endpoint)
-            target_url = f"{self.realm_url}/protocol/openid-connect/auth"
-
-            # Build query string
-            query_string = urlencode(params)
-
-            logger.info(f"Proxying auth request to: {target_url} with scopes: {params['scope']}")
-            return RedirectResponse(url=f"{target_url}?{query_string}")
-
-        # Add authorization proxy
-        routes.append(
-            Route(
-                "/authorize",
-                endpoint=authorize_proxy,
-                methods=["GET"],
             )
         )
 

@@ -1,7 +1,5 @@
 """Run with: cd servers && uvicorn auth_mcp:app --host 0.0.0.0 --port 8000"""
 
-import base64
-import json
 import logging
 import os
 import uuid
@@ -25,7 +23,6 @@ from keycloak_provider import KeycloakAuthProvider
 from opentelemetry.instrumentation.starlette import StarletteInstrumentor
 from rich.console import Console
 from rich.logging import RichHandler
-from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import JSONResponse
 
 from opentelemetry_middleware import OpenTelemetryMiddleware
@@ -114,7 +111,7 @@ elif mcp_auth_provider == "keycloak":
     auth = KeycloakAuthProvider(
         realm_url=KEYCLOAK_REALM_URL,
         base_url=keycloak_base_url,
-        required_scopes=["mcp:access"],
+        required_scopes=["openid", "mcp:access"],
         audience=keycloak_audience,
     )
     logger.info(
@@ -251,51 +248,7 @@ async def health_check(_request):
     return JSONResponse({"status": "healthy", "service": "mcp-server"})
 
 
-# Debug middleware to log ALL incoming requests
-class RequestDebugMiddleware(BaseHTTPMiddleware):
-    async def dispatch(self, request, call_next):
-        path = request.url.path
-        method = request.method
-        logger.info(f"=== INCOMING REQUEST: {method} {path} ===")
-        logger.info(f"Headers: {dict(request.headers)}")
-        response = await call_next(request)
-        logger.info(f"=== RESPONSE: {response.status_code} for {method} {path} ===")
-        return response
-
-
-# Debug middleware to log token claims before auth
-class TokenDebugMiddleware(BaseHTTPMiddleware):
-    async def dispatch(self, request, call_next):
-        path = request.url.path
-        method = request.method
-        auth_header = request.headers.get("Authorization", "")
-
-        if auth_header.startswith("Bearer "):
-            token = auth_header[7:]
-            try:
-                parts = token.split(".")
-                payload = parts[1]
-                payload += "=" * (4 - len(payload) % 4)
-                claims = json.loads(base64.urlsafe_b64decode(payload))
-                logger.info(f"=== TOKEN DEBUG [{method} {path}] ===")
-                logger.info(f"iss: {claims.get('iss')}")
-                logger.info(f"aud: {claims.get('aud')}")
-                logger.info(f"azp: {claims.get('azp')}")
-                logger.info(f"scope: {claims.get('scope')}")
-                logger.info(f"exp: {claims.get('exp')}")
-                logger.info("===================")
-            except Exception as e:
-                logger.error(f"Token decode error [{method} {path}]: {e}")
-        else:
-            logger.info(
-                f"=== NO BEARER TOKEN [{method} {path}] auth_header={auth_header[:50] if auth_header else 'empty'} ==="
-            )
-        return await call_next(request)
-
-
 # Configure Starlette middleware for OpenTelemetry
 # We must do this *after* defining all the MCP server routes
 app = mcp.http_app()
-app.add_middleware(RequestDebugMiddleware)
-app.add_middleware(TokenDebugMiddleware)
 StarletteInstrumentor.instrument_app(app)
