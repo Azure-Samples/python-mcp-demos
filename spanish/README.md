@@ -406,6 +406,46 @@ Este proyecto soporta desplegar con autenticación OAuth 2.0 usando Keycloak com
 
    El agente detecta `KEYCLOAK_REALM_URL` en el entorno y se autentica vía DCR + client credentials. Al éxito, agregará un gasto e imprimirá el resultado.
 
+### Usar servidor MCP OAuth Keycloak con GitHub Copilot
+
+El despliegue de Keycloak soporta Dynamic Client Registration (DCR), lo que permite que VS Code se registre automáticamente como cliente OAuth. Las URIs de redirección de VS Code están preconfiguradas en el realm de Keycloak.
+
+Para usar el servidor MCP desplegado con GitHub Copilot Chat:
+
+1. Para evitar conflictos, detén los servidores MCP de `mcp.json` y deshabilitá los servidores MCP de gastos en las herramientas de GitHub Copilot Chat.
+2. Seleccioná "MCP: Add Server" desde la Paleta de Comandos de VS Code
+3. Seleccioná "HTTP" como tipo de servidor
+4. Ingresá la URL del servidor MCP desde `azd env get-value MCP_SERVER_URL`
+5. Deberías ver una pantalla de autenticación de Keycloak abrirse en tu navegador. Seleccioná "Allow access":
+
+   ![Pantalla de permitir acceso de Keycloak](../screenshots/kc-allow-1.jpg)
+
+6. Iniciá sesión con un usuario de Keycloak (ej. `testuser` / `testpass` para el usuario demo preconfigurado):
+
+   ![Pantalla de inicio de sesión de Keycloak](../screenshots/kc-signin-2.jpg)
+
+7. Después de la autenticación, el navegador redirigirá de vuelta a VS Code:
+
+   ![Redirección de VS Code después del inicio de sesión de Keycloak](../screenshots/kc-redirect-3.jpg)
+
+8. Habilitá el servidor MCP en las herramientas de GitHub Copilot Chat:
+
+   ![Seleccionar herramientas MCP en GitHub Copilot](../screenshots/kc-select-tools-4.jpg)
+
+9. Probálo con una consulta de seguimiento de gastos:
+
+   ```text
+   Registrá un gasto de 75 dólares de útiles de oficina en mi visa el viernes pasado
+   ```
+
+   ![Ejemplo de GitHub Copilot Chat con autenticación Keycloak](../screenshots/kc-chat-5.jpg)
+
+10. Verificá que el gasto se agregó revisando el contenedor `user-expenses` de Cosmos DB en el Portal de Azure o preguntando a GitHub Copilot Chat:
+
+    ```text
+    Dime mis gastos de la semana pasada
+    ```
+
 ### Limitaciones conocidas (trade-offs de la demo)
 
 | Ítem | Actual | Recomendación para producción | Por qué |

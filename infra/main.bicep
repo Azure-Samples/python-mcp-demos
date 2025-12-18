@@ -782,8 +782,7 @@ module server 'server.bicep' = {
     openTelemetryPlatform: openTelemetryPlatform
     exists: serverExists
     // Keycloak authentication configuration (only when enabled)
-    keycloakRealmUrl: useKeycloak ? '${keycloak!.outputs.uri}/realms/${keycloakRealmName}' : ''
-    keycloakTokenIssuer: useKeycloak ? '${keycloakMcpServerBaseUrl}/realms/${keycloakRealmName}' : ''
+    keycloakRealmUrl: useKeycloak ? '${keycloak!.outputs.uri}/auth/realms/${keycloakRealmName}' : ''
     keycloakMcpServerBaseUrl: useKeycloak ? keycloakMcpServerBaseUrl : ''
     keycloakMcpServerAudience: keycloakMcpServerAudience
     // Azure/Entra ID OAuth Proxy authentication configuration (only when enabled)
@@ -810,7 +809,7 @@ module agent 'agent.bicep' = {
     openAiDeploymentName: openAiDeploymentName
     openAiEndpoint: openAi.outputs.endpoint
     mcpServerUrl: useKeycloak ? 'https://mcproutes.${containerApps.outputs.defaultDomain}/mcp' : '${server.outputs.uri}/mcp'
-    keycloakRealmUrl: useKeycloak ? '${keycloak.outputs.uri}/realms/${keycloakRealmName}' : ''
+    keycloakRealmUrl: useKeycloak ? '${keycloak.outputs.uri}/auth/realms/${keycloakRealmName}' : ''
     exists: agentExists
   }
 }
@@ -946,9 +945,10 @@ output KEYCLOAK_MCP_SERVER_BASE_URL string = useKeycloak ? keycloakMcpServerBase
 
 // Keycloak and MCP Server routing outputs (only populated when mcpAuthProvider is keycloak)
 output KEYCLOAK_REALM_URL string = useKeycloak ? '${httpRoutes!.outputs.routeConfigUrl}/auth/realms/${keycloakRealmName}' : ''
-output KEYCLOAK_ADMIN_CONSOLE string = useKeycloak ? '${httpRoutes!.outputs.routeConfigUrl}/auth/admin' : ''
+output KEYCLOAK_ADMIN_CONSOLE string = useKeycloak ? '${httpRoutes!.outputs.routeConfigUrl}/auth/admin/master/console' : ''
 output KEYCLOAK_DIRECT_URL string = keycloak.outputs.uri
-output KEYCLOAK_TOKEN_ISSUER string = useKeycloak ? '${keycloakMcpServerBaseUrl}/realms/${keycloakRealmName}' : ''
+output KEYCLOAK_TOKEN_ISSUER string = useKeycloak ? '${keycloakMcpServerBaseUrl}/auth/realms/${keycloakRealmName}' : ''
+output KEYCLOAK_AGENT_REALM_URL string = useKeycloak ? '${keycloak!.outputs.uri}/auth/realms/${keycloakRealmName}' : ''
 
 // Auth provider for env scripts
 output MCP_AUTH_PROVIDER string = mcpAuthProvider

@@ -22,5 +22,7 @@ ENTRYPOINT ["/opt/keycloak/bin/kc.sh"]
 # Start in dev mode with H2 database (still uses pre-built themes)
 # --proxy-headers=xforwarded tells Keycloak it's behind a reverse proxy that sets X-Forwarded-* headers
 # --hostname-strict=false allows dynamic hostname resolution from proxy headers
+# --http-relative-path=/auth sets the base path so Keycloak serves all content under /auth/*
 # --import-realm imports the MCP realm on startup
-CMD ["start-dev", "--http-port=8080", "--proxy-headers=xforwarded", "--hostname-strict=false", "--import-realm"]
+# --import-strategy=overwrite-existing ensures realm.json changes are applied even if the realm exists
+CMD ["start-dev", "--http-port=8080", "--proxy-headers=xforwarded", "--hostname-strict=false", "--http-relative-path=/auth", "--import-realm", "--import-strategy=overwrite-existing"]

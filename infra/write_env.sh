@@ -55,6 +55,7 @@ KEYCLOAK_REALM_URL=$(get_azd_value KEYCLOAK_REALM_URL)
 if [ -n "$KEYCLOAK_REALM_URL" ]; then
   echo "KEYCLOAK_REALM_URL=${KEYCLOAK_REALM_URL}" >> "$ENV_FILE_PATH"
   write_env_if_set KEYCLOAK_TOKEN_ISSUER
+  write_env_if_set KEYCLOAK_AGENT_REALM_URL
 fi
 
 # Entra proxy env vars (only if ENTRA_PROXY_AZURE_CLIENT_ID is set)

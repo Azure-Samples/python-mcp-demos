@@ -15,14 +15,12 @@ from azure.monitor.opentelemetry import configure_azure_monitor
 from cosmosdb_store import CosmosDBStore
 from dotenv import load_dotenv
 from fastmcp import Context, FastMCP
-from fastmcp.server.auth import RemoteAuthProvider
 from fastmcp.server.auth.providers.azure import AzureProvider
-from fastmcp.server.auth.providers.jwt import JWTVerifier
 from fastmcp.server.dependencies import get_access_token
 from fastmcp.server.middleware import Middleware, MiddlewareContext
 from key_value.aio.stores.memory import MemoryStore
+from keycloak_provider import KeycloakAuthProvider
 from opentelemetry.instrumentation.starlette import StarletteInstrumentor
-from pydantic import AnyHttpUrl
 from rich.console import Console
 from rich.logging import RichHandler
 from starlette.responses import JSONResponse
@@ -101,25 +99,27 @@ if mcp_auth_provider == "entra_proxy":
         "Using Entra OAuth Proxy for server %s and %s storage", entra_base_url, type(oauth_client_store).__name__
     )
 elif mcp_auth_provider == "keycloak":
-    # Keycloak authentication using RemoteAuthProvider with JWT verification
+    # Keycloak authentication using KeycloakAuthProvider with DCR support
     KEYCLOAK_REALM_URL = os.environ["KEYCLOAK_REALM_URL"]
-    KEYCLOAK_TOKEN_ISSUER = os.getenv("KEYCLOAK_TOKEN_ISSUER", KEYCLOAK_REALM_URL)
-    token_verifier = JWTVerifier(
-        jwks_uri=f"{KEYCLOAK_REALM_URL}/protocol/openid-connect/certs",
-        issuer=KEYCLOAK_TOKEN_ISSUER,
-        audience=os.getenv("KEYCLOAK_MCP_SERVER_AUDIENCE", "mcp-server"),
-    )
-    # Prefer specific base URL env for Keycloak when provided
     if RUNNING_IN_PRODUCTION:
         keycloak_base_url = os.environ["KEYCLOAK_MCP_SERVER_BASE_URL"]
     else:
-        keycloak_base_url = "http://localhost:8000/mcp"
-    auth = RemoteAuthProvider(
-        token_verifier=token_verifier,
-        authorization_servers=[AnyHttpUrl(KEYCLOAK_REALM_URL)],
+        keycloak_base_url = "http://localhost:8000"
+
+    keycloak_audience = os.getenv("KEYCLOAK_MCP_SERVER_AUDIENCE") or "mcp-server"
+
+    auth = KeycloakAuthProvider(
+        realm_url=KEYCLOAK_REALM_URL,
         base_url=keycloak_base_url,
+        required_scopes=["openid", "mcp:access"],
+        audience=keycloak_audience,
     )
-    logger.info("Using Keycloak auth for server %s and realm %s", keycloak_base_url, KEYCLOAK_REALM_URL)
+    logger.info(
+        "Using Keycloak DCR auth for server %s and realm %s (audience=%s)",
+        keycloak_base_url,
+        KEYCLOAK_REALM_URL,
+        keycloak_audience,
+    )
 else:
     logger.error("No authentication configured for MCP server, exiting.")
     raise SystemExit(1)

@@ -432,23 +432,46 @@ This project supports deploying with OAuth 2.0 authentication using Keycloak as 
 
    Login with `admin` and your configured password.
 
-### Testing with the agent
 
-1. Generate the local environment file (automatically created after `azd up`):
+### Use Keycloak OAuth MCP server with GitHub Copilot
 
-   ```bash
-   ./infra/write_env.sh
+The Keycloak deployment supports Dynamic Client Registration (DCR), which allows VS Code to automatically register as an OAuth client. VS Code redirect URIs are pre-configured in the Keycloak realm.
+
+To use the deployed MCP server with GitHub Copilot Chat:
+
+1. To avoid conflicts, stop the MCP servers from `mcp.json` and disable the expense MCP servers in GitHub Copilot Chat tools.
+2. Select "MCP: Add Server" from the VS Code Command Palette
+3. Select "HTTP" as the server type
+4. Enter the URL of the MCP server from `azd env get-value MCP_SERVER_URL`
+5. You should see a Keycloak authentication screen open in your browser. Select "Allow access":
+
+   ![Keycloak allow access screen](screenshots/kc-allow-1.jpg)
+
+6. Sign in with a Keycloak user (e.g., `testuser` / `testpass` for the pre-configured demo user):
+
+   ![Keycloak sign-in screen](screenshots/kc-signin-2.jpg)
+
+7. After authentication, the browser will redirect back to VS Code:
+
+   ![VS Code redirect after Keycloak sign-in](screenshots/kc-redirect-3.jpg)
+
+8. Enable the MCP server in GitHub Copilot Chat tools:
+
+   ![Select MCP tools in GitHub Copilot](screenshots/kc-select-tools-4.jpg)
+
+9. Test it with an expense tracking query:
+
+   ```text
+   Log expense for 75 dollars of office supplies on my visa last Friday
    ```
 
-   This creates `.env` with `KEYCLOAK_REALM_URL`, `MCP_SERVER_URL`, and Azure OpenAI settings.
+   ![Example GitHub Copilot Chat with Keycloak auth](screenshots/kc-chat-5.jpg)
 
-2. Run the agent:
+10. Verify the expense was added by checking the Cosmos DB `user-expenses` container in the Azure Portal or by asking GitHub Copilot Chat:
 
-   ```bash
-   uv run agents/agentframework_http.py
-   ```
-
-   The agent automatically detects `KEYCLOAK_REALM_URL` in the environment and authenticates via DCR + client credentials. On success, it will add an expense and print the result.
+    ```text
+    Show me my expenses from last week
+    ```
 
 ### Known limitations (demo trade-offs)
 

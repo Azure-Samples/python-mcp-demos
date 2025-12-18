@@ -22,7 +22,6 @@ param applicationInsightsConnectionString string = ''
 ])
 param openTelemetryPlatform string = 'appinsights'
 param keycloakRealmUrl string = ''
-param keycloakTokenIssuer string = ''
 param keycloakMcpServerAudience string = 'mcp-server'
 param keycloakMcpServerBaseUrl string = ''
 param entraProxyClientId string = ''
@@ -111,10 +110,6 @@ var keycloakEnv = !empty(keycloakRealmUrl) ? [
   {
     name: 'KEYCLOAK_REALM_URL'
     value: keycloakRealmUrl
-  }
-  {
-    name: 'KEYCLOAK_TOKEN_ISSUER'
-    value: !empty(keycloakTokenIssuer) ? keycloakTokenIssuer : keycloakRealmUrl
   }
   {
     name: 'KEYCLOAK_MCP_SERVER_AUDIENCE'
