@@ -1,11 +1,7 @@
 {
   "realm": "mcp",
   "enabled": true,
-  "registrationAllowed": false,
-  "loginWithEmailAllowed": true,
-  "duplicateEmailsAllowed": false,
   "resetPasswordAllowed": true,
-  "editUsernameAllowed": false,
   "bruteForceProtected": true,
   "accessTokenLifespan": 300,
   "ssoSessionIdleTimeout": 1800,
@@ -28,17 +24,6 @@
         "display.on.consent.screen": "false"
       },
       "protocolMappers": [
-        {
-          "name": "mcp-server-audience",
-          "protocol": "openid-connect",
-          "protocolMapper": "oidc-audience-mapper",
-          "consentRequired": false,
-          "config": {
-            "included.custom.audience": "mcp-server",
-            "id.token.claim": "false",
-            "access.token.claim": "true"
-          }
-        },
         {
           "name": "sub",
           "protocol": "openid-connect",
@@ -83,17 +68,15 @@
       "enabled": true,
       "publicClient": true,
       "standardFlowEnabled": true,
-      "directAccessGrantsEnabled": true,
-      "serviceAccountsEnabled": false,
-      "authorizationServicesEnabled": false,
-      "fullScopeAllowed": true,
       "redirectUris": [
         "http://127.0.0.1/*",
         "http://localhost/*",
         "https://vscode.dev/redirect",
         "https://insiders.vscode.dev/redirect"
       ],
-      "webOrigins": ["+"]
+      "webOrigins": [
+        "+"
+      ]
     }
   ],
   "users": [
@@ -119,26 +102,31 @@
         "providerId": "trusted-hosts",
         "subType": "anonymous",
         "config": {
-          "host-sending-registration-request-must-match": ["false"],
-          "client-uris-must-match": ["true"],
+          "host-sending-registration-request-must-match": [
+            "false"
+          ],
+          "client-uris-must-match": [
+            "true"
+          ],
           "trusted-hosts": [
-  "localhost",
-  "127.0.0.1",
-  "172.17.0.1",
-  "host.docker.internal",
-  "vscode.dev",
-  "insiders.vscode.dev",
-  "code.visualstudio.com"
-]
+            "localhost",
+            "127.0.0.1",
+            "172.17.0.1",
+            "host.docker.internal",
+            "vscode.dev",
+            "insiders.vscode.dev",
+            "code.visualstudio.com"
+          ]
         }
       },
-
       {
         "name": "Max Clients Limit",
         "providerId": "max-clients",
         "subType": "anonymous",
         "config": {
-          "max-clients": ["200"]
+          "max-clients": [
+            "200"
+          ]
         }
       },
       {
@@ -150,43 +138,12 @@
             "oidc-usermodel-attribute-mapper",
             "oidc-full-name-mapper",
             "oidc-address-mapper",
-            "saml-user-attribute-idp-mapper",
             "oidc-usermodel-property-mapper",
-            "saml-role-idp-mapper",
-            "saml-user-property-idp-mapper",
             "oidc-sha256-pairwise-sub-mapper",
             "oidc-sub-mapper",
             "oidc-usersessionmodel-note-mapper",
             "oidc-audience-mapper"
           ]
-        }
-      },
-      {
-        "name": "Allowed Protocol Mapper Types",
-        "providerId": "allowed-protocol-mappers",
-        "subType": "authenticated",
-        "config": {
-          "allowed-protocol-mapper-types": [
-            "saml-user-property-idp-mapper",
-            "oidc-sha256-pairwise-sub-mapper",
-            "oidc-usermodel-attribute-mapper",
-            "saml-role-idp-mapper",
-            "oidc-full-name-mapper",
-            "oidc-usermodel-property-mapper",
-            "saml-user-attribute-idp-mapper",
-            "oidc-address-mapper",
-            "oidc-sub-mapper",
-            "oidc-usersessionmodel-note-mapper",
-            "oidc-audience-mapper"
-          ]
-        }
-      },
-      {
-        "name": "Allowed Client Scopes",
-        "providerId": "allowed-client-templates",
-        "subType": "authenticated",
-        "config": {
-          "allow-default-scopes": ["true"]
         }
       }
     ]
