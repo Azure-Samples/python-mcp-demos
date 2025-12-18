@@ -12,7 +12,7 @@ from rich.logging import RichHandler
 
 # Configure logging
 logging.basicConfig(level=logging.WARNING, format="%(message)s", datefmt="[%X]", handlers=[RichHandler()])
-logger = logging.getLogger("agentframework_learn")
+logger = logging.getLogger("agentframework_tavily")
 logger.setLevel(logging.INFO)
 
 # Load environment variables
@@ -47,18 +47,20 @@ else:
 
 async def http_mcp_example():
     """
-    Creates an agent that can answer questions about Microsoft documentation
-    using the Microsoft Learn MCP server.
+    Creates an agent that can search the web using the Tavily MCP server.
     """
+
+    tavily_key = os.environ["TAVILY_API_KEY"]
+    headers = {"Authorization": f"Bearer {tavily_key}"}
     async with (
-        MCPStreamableHTTPTool(name="Microsoft Learn MCP", url="https://learn.microsoft.com/api/mcp") as mcp_server,
+        MCPStreamableHTTPTool(name="Tavily MCP", url="https://mcp.tavily.com/mcp/", headers=headers) as mcp_server,
         ChatAgent(
             chat_client=client,
-            name="DocsAgent",
-            instructions="You help with Microsoft documentation questions.",
+            name="WebSearchAgent",
+            instructions="You search the web with Tavily and provide concise answers with links.",
         ) as agent,
     ):
-        query = "How to create an Azure storage account using az cli?"
+        query = "What's new in Python 3.14? Include relevant links."
         result = await agent.run(query, tools=mcp_server)
         print(result)
 
