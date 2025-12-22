@@ -29,6 +29,7 @@ param entraProxyClientId string = ''
 param entraProxyClientSecret string = ''
 param entraProxyBaseUrl string = ''
 param tenantId string = ''
+param entraAdminGroupId string = ''
 @secure()
 param logfireToken string = ''
 @allowed([
@@ -138,6 +139,10 @@ var entraProxyEnv = !empty(entraProxyClientId) ? [
   {
     name: 'AZURE_TENANT_ID'
     value: tenantId
+  }
+  {
+    name: 'ENTRA_ADMIN_GROUP_ID'
+    value: entraAdminGroupId
   }
 ] : []
 

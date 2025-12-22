@@ -78,6 +78,9 @@ param keycloakMcpServerAudience string = 'mcp-server'
 @description('Flag to restrict ACR public network access (requires VPN for local image push when true)')
 param usePrivateAcr bool = false
 
+@description('Entra ID group ID for admin access to expense statistics (only used when mcpAuthProvider is entra_proxy)')
+param entraAdminGroupId string = ''
+
 @description('Flag to restrict Log Analytics public query access for increased security')
 param usePrivateLogAnalytics bool = false
 
@@ -790,6 +793,7 @@ module server 'server.bicep' = {
     entraProxyClientSecret: useEntraProxy ? entraProxyClientSecret : ''
     entraProxyBaseUrl: useEntraProxy ? entraProxyMcpServerBaseUrl : ''
     tenantId: useEntraProxy ? tenant().tenantId : ''
+    entraAdminGroupId: useEntraProxy ? entraAdminGroupId : ''
     mcpAuthProvider: mcpAuthProvider
     logfireToken: logfireToken
   }

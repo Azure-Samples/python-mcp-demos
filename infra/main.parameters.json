@@ -56,6 +56,9 @@
       "entraProxyClientSecret": {
         "value": "${ENTRA_PROXY_AZURE_CLIENT_SECRET}"
       },
+      "entraAdminGroupId": {
+        "value": "${ENTRA_ADMIN_GROUP_ID}"
+      },
       "logfireToken": {
         "value": "${LOGFIRE_TOKEN}"
       }

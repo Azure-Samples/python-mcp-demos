@@ -3,19 +3,26 @@ import os
 import random
 import subprocess
 import uuid
+from dataclasses import dataclass
 
 from azure.identity.aio import AzureDeveloperCliCredential
 from dotenv_azd import load_azd_env
+from kiota_abstractions.api_error import APIError
+from kiota_abstractions.base_request_configuration import RequestConfiguration
+from msgraph import GraphServiceClient
 from msgraph.generated.applications.item.add_password.add_password_post_request_body import (
     AddPasswordPostRequestBody,
 )
 from msgraph.generated.models.api_application import ApiApplication
 from msgraph.generated.models.application import Application
+from msgraph.generated.models.o_auth2_permission_grant import OAuth2PermissionGrant
 from msgraph.generated.models.password_credential import PasswordCredential
 from msgraph.generated.models.permission_scope import PermissionScope
 from msgraph.generated.models.service_principal import ServicePrincipal
 from msgraph.generated.models.web_application import WebApplication
-from msgraph.graph_service_client import GraphServiceClient
+from msgraph.generated.oauth2_permission_grants.oauth2_permission_grants_request_builder import (
+    Oauth2PermissionGrantsRequestBuilder,
+)
 
 
 async def get_application(graph_client: GraphServiceClient, app_id: str) -> str | None:
@@ -136,7 +143,7 @@ def update_app_with_identifier_uri(client_id: str) -> Application:
     )
 
 
-async def create_or_update_fastmcp_app(graph_client: GraphServiceClient) -> None:
+async def create_or_update_fastmcp_app(graph_client: GraphServiceClient):
     """Create or update a FastMCP app registration."""
     app_id_env_var = "ENTRA_PROXY_AZURE_CLIENT_ID"
     app_secret_env_var = "ENTRA_PROXY_AZURE_CLIENT_SECRET"
@@ -171,6 +178,73 @@ async def create_or_update_fastmcp_app(graph_client: GraphServiceClient) -> None
         update_azd_env(app_secret_env_var, client_secret)
         print("Client secret created and saved to environment.")
 
+    return app_id
+
+
+@dataclass
+class GrantDefinition:
+    principal_id: str
+    resource_app_id: str
+    scopes: list[str]
+    target_label: str
+
+    def scope_string(self) -> str:
+        return " ".join(self.scopes)
+
+
+async def grant_application_admin_consent(graph_client: GraphServiceClient, server_app_id: str):
+    server_principal = await graph_client.service_principals_with_app_id(server_app_id).get()
+    if server_principal is None or server_principal.id is None:
+        raise ValueError("Unable to locate service principal for server application")
+
+    grant_definitions = [
+        GrantDefinition(
+            principal_id=server_principal.id,
+            resource_app_id="00000003-0000-0000-c000-000000000000",
+            scopes=["User.Read", "email", "offline_access", "openid", "profile"],
+            target_label="server application",
+        )
+    ]
+
+    for grant in grant_definitions:
+        resource_principal = await graph_client.service_principals_with_app_id(grant.resource_app_id).get()
+        if resource_principal is None or resource_principal.id is None:
+            raise ValueError(f"Unable to locate service principal for resource {grant.resource_app_id}")
+
+        desired_scope = grant.scope_string()
+        filter_query = f"clientId eq '{grant.principal_id}' and resourceId eq '{resource_principal.id}'"
+        query_params = Oauth2PermissionGrantsRequestBuilder.Oauth2PermissionGrantsRequestBuilderGetQueryParameters(
+            filter=filter_query
+        )
+        request_config = RequestConfiguration[
+            Oauth2PermissionGrantsRequestBuilder.Oauth2PermissionGrantsRequestBuilderGetQueryParameters
+        ](query_parameters=query_params)
+        existing_grants = await graph_client.oauth2_permission_grants.get(request_configuration=request_config)
+
+        current_grant = existing_grants.value[0] if existing_grants and existing_grants.value else None
+
+        if current_grant:
+            print(f"Admin consent already granted for {desired_scope} on the {grant.target_label}")
+            continue
+
+        try:
+            await graph_client.oauth2_permission_grants.post(
+                OAuth2PermissionGrant(
+                    client_id=grant.principal_id,
+                    consent_type="AllPrincipals",
+                    resource_id=resource_principal.id,
+                    scope=desired_scope,
+                )
+            )
+            print(f"Granted admin consent for {desired_scope} on the {grant.target_label}")
+        except APIError as error:
+            status_code = error.response_status_code
+            if status_code in {401, 403}:
+                print(f"Failed to grant admin consent: {error.message}")
+                return
+            else:
+                raise
+
 
 async def main():
     # Configuration - customize these as needed
@@ -182,8 +256,12 @@ async def main():
     scopes = ["https://graph.microsoft.com/.default"]
     graph_client = GraphServiceClient(credentials=credential, scopes=scopes)
 
-    await create_or_update_fastmcp_app(graph_client)
-    print("Setup complete!")
+    server_app_id = await create_or_update_fastmcp_app(graph_client)
+
+    print("Attempting to grant admin consent for the client and server applications...")
+    await grant_application_admin_consent(graph_client, server_app_id)
+
+    print("✅ Entra app registration setup is complete.")
 
 
 if __name__ == "__main__":
